@@ -1085,6 +1085,23 @@ body.mode-tests .mode-tests-only {
   display: flex !important;
 }
 
+/* Hide viewers based on mode */
+body.mode-tests .spec-viewer {
+  display: none !important;
+}
+
+body.mode-specs .test-viewer {
+  display: none !important;
+}
+
+/* Mode sidebar - fills remaining sidebar space */
+.mode-sidebar {
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ============================================
    SCROLLBAR STYLING
    ============================================ */
@@ -1268,4 +1285,13 @@ pre[class*="language-"] {
   .content {
     width: 100%;
   }
+}
+
+/* Utility class to disable transitions during state restoration */
+.no-transitions,
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition: none !important;
+  animation: none !important;
 }

@@ -15,13 +15,64 @@ const state = {
   testsInitialized: false,
   specsSearch: '',
   testsSearch: '',
-  specsSelectedItem: null,
-  testsSelectedItem: null
+  specsHasSelection: false,
+  testsHasSelection: false
 };
 
 // Storage keys for remembering versions per mode
 const SPECS_VERSION_KEY = 'ethspec-tools-specs-version';
 const TESTS_VERSION_KEY = 'ethspec-tools-tests-version';
+
+/**
+ * Initialize search functionality (centralized for both modes)
+ */
+function initSearch() {
+  const searchInput = document.getElementById('searchInput');
+  const searchClear = document.getElementById('searchClear');
+
+  let debounceTimer;
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+
+    const hasText = searchInput.value.length > 0;
+    searchClear.classList.toggle('hidden', !hasText);
+
+    debounceTimer = setTimeout(() => {
+      const searchTerm = searchInput.value.toLowerCase();
+
+      // Update state and filter the appropriate tree
+      if (state.mode === 'specs') {
+        state.specsSearch = searchInput.value;
+        if (state.specsModule && state.specsModule.applySearch) {
+          state.specsModule.applySearch(searchTerm);
+        }
+      } else {
+        state.testsSearch = searchInput.value;
+        if (state.testsModule && state.testsModule.applySearch) {
+          state.testsModule.applySearch(searchTerm);
+        }
+      }
+    }, 150);
+  });
+
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClear.classList.add('hidden');
+
+    if (state.mode === 'specs') {
+      state.specsSearch = '';
+      if (state.specsModule && state.specsModule.applySearch) {
+        state.specsModule.applySearch('');
+      }
+    } else {
+      state.testsSearch = '';
+      if (state.testsModule && state.testsModule.applySearch) {
+        state.testsModule.applySearch('');
+      }
+    }
+  });
+}
 
 /**
  * Parse URL hash to determine mode and path
@@ -58,25 +109,22 @@ function updateHash(mode, path = '') {
 
 /**
  * Switch between specs and tests mode
+ * Uses CSS visibility toggle for instant switching (like browser tabs)
  */
 async function switchMode(newMode) {
   if (state.mode === newMode) return;
 
-  // Save current state before switching
+  // Save current search before switching
   const searchInput = document.getElementById('searchInput');
-  const activeLabel = document.querySelector('.tree-label.active');
-
   if (state.mode === 'specs') {
     state.specsSearch = searchInput.value;
-    state.specsSelectedItem = activeLabel ? activeLabel.closest('.tree-node')?.dataset.name : null;
   } else {
     state.testsSearch = searchInput.value;
-    state.testsSelectedItem = activeLabel ? activeLabel.closest('.tree-node')?.dataset.testPath : null;
   }
 
   state.mode = newMode;
 
-  // Update body class for CSS mode visibility
+  // Update body class for CSS mode visibility (this handles sidebar toggle instantly)
   document.body.classList.remove('mode-specs', 'mode-tests');
   document.body.classList.add(`mode-${newMode}`);
 
@@ -87,32 +135,19 @@ async function switchMode(newMode) {
 
   // Restore search for new mode
   const savedSearch = newMode === 'specs' ? state.specsSearch : state.testsSearch;
-  searchInput.placeholder = newMode === 'specs' ? 'Search specifications...' : 'Search tests...';
   searchInput.value = savedSearch;
   document.getElementById('searchClear').classList.toggle('hidden', !savedSearch);
 
-  // Clear tree
-  document.getElementById('tree').innerHTML = '';
-
-  // Clear filter containers
-  document.getElementById('forkFilters').innerHTML = '';
-  document.getElementById('typeFilters').innerHTML = '';
-  document.getElementById('presetFilters').innerHTML = '';
-  document.getElementById('runnerFilters').innerHTML = '';
-
-  // Hide all viewers, show welcome
-  document.getElementById('welcome').classList.remove('hidden');
-  document.getElementById('specViewer').classList.add('hidden');
-  document.getElementById('testViewer').classList.add('hidden');
-  document.getElementById('loading').classList.add('hidden');
-  document.getElementById('error').classList.add('hidden');
-
-  // Load and initialize the appropriate module
-  if (newMode === 'specs') {
-    await initSpecsMode(savedSearch, state.specsSelectedItem);
-  } else {
-    await initTestsMode(savedSearch, state.testsSelectedItem);
+  // Initialize mode if first time (lazy initialization)
+  if (newMode === 'specs' && !state.specsInitialized) {
+    await initSpecsMode(savedSearch);
+  } else if (newMode === 'tests' && !state.testsInitialized) {
+    await initTestsMode(savedSearch);
   }
+
+  // Update welcome screen visibility based on whether the new mode has a selection
+  const hasSelection = newMode === 'specs' ? state.specsHasSelection : state.testsHasSelection;
+  document.getElementById('welcome').classList.toggle('hidden', hasSelection);
 
   // Update URL
   updateHash(newMode);
@@ -121,7 +156,7 @@ async function switchMode(newMode) {
 /**
  * Initialize specs mode
  */
-async function initSpecsMode(searchTerm = '', selectedItem = null) {
+async function initSpecsMode(searchTerm = '') {
   if (!state.specsModule) {
     // Dynamically import specs module
     state.specsModule = await import('./specs/specsMain.js');
@@ -130,15 +165,15 @@ async function initSpecsMode(searchTerm = '', selectedItem = null) {
   // Get saved version or default
   const savedVersion = localStorage.getItem(SPECS_VERSION_KEY);
 
-  // Initialize or reinitialize
-  await state.specsModule.init(savedVersion, searchTerm, selectedItem);
+  // Initialize
+  await state.specsModule.init(savedVersion, searchTerm);
   state.specsInitialized = true;
 }
 
 /**
  * Initialize tests mode
  */
-async function initTestsMode(searchTerm = '', selectedItem = null) {
+async function initTestsMode(searchTerm = '') {
   if (!state.testsModule) {
     // Dynamically import tests module
     state.testsModule = await import('./tests/testsMain.js');
@@ -147,8 +182,8 @@ async function initTestsMode(searchTerm = '', selectedItem = null) {
   // Get saved version or default
   const savedVersion = localStorage.getItem(TESTS_VERSION_KEY);
 
-  // Initialize or reinitialize
-  await state.testsModule.init(savedVersion, searchTerm, selectedItem);
+  // Initialize
+  await state.testsModule.init(savedVersion, searchTerm);
   state.testsInitialized = true;
 }
 
@@ -172,6 +207,7 @@ async function init() {
   initDarkMode();
   initResizable();
   initModeToggle();
+  initSearch();
 
   // Parse URL to determine initial mode
   const { mode, path } = parseHash();
@@ -214,6 +250,14 @@ export function saveTestsVersion(version) {
 
 export function getCurrentMode() {
   return state.mode;
+}
+
+export function setSpecsHasSelection(hasSelection) {
+  state.specsHasSelection = hasSelection;
+}
+
+export function setTestsHasSelection(hasSelection) {
+  state.testsHasSelection = hasSelection;
 }
 
 export { updateHash };

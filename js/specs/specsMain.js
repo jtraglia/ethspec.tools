@@ -7,7 +7,7 @@ import { buildTree, filterTree, setOnItemSelectCallback } from './tree.js';
 import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurrentVersion } from './specViewer.js';
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
 import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
-import { saveSpecsVersion, updateHash } from '../main.js';
+import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
 
 // Application state
 const state = {
@@ -46,7 +46,7 @@ function extractForks(data) {
  * Build fork filter buttons
  */
 function buildForkFilters() {
-  const container = document.getElementById('forkFilters');
+  const container = document.getElementById('specsForkFilters');
   container.innerHTML = '';
 
   state.forks.forEach(fork => {
@@ -75,7 +75,7 @@ function buildForkFilters() {
  * Build type filter buttons
  */
 function buildTypeFilters() {
-  const container = document.getElementById('typeFilters');
+  const container = document.getElementById('specsTypeFilters');
   container.innerHTML = '';
 
   CATEGORY_ORDER.forEach(key => {
@@ -109,39 +109,11 @@ function applyFilters() {
 }
 
 /**
- * Initialize search functionality
+ * Apply search term (called from main.js)
  */
-function initSearch() {
-  const searchInput = document.getElementById('searchInput');
-  const searchClear = document.getElementById('searchClear');
-
-  let debounceTimer;
-
-  // Remove existing listeners by cloning
-  const newSearchInput = searchInput.cloneNode(true);
-  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-
-  const newSearchClear = searchClear.cloneNode(true);
-  searchClear.parentNode.replaceChild(newSearchClear, searchClear);
-
-  newSearchInput.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-
-    const hasText = newSearchInput.value.length > 0;
-    newSearchClear.classList.toggle('hidden', !hasText);
-
-    debounceTimer = setTimeout(() => {
-      state.searchTerm = newSearchInput.value.toLowerCase();
-      applyFilters();
-    }, 300);
-  });
-
-  newSearchClear.addEventListener('click', () => {
-    newSearchInput.value = '';
-    newSearchClear.classList.add('hidden');
-    state.searchTerm = '';
-    applyFilters();
-  });
+export function applySearch(searchTerm) {
+  state.searchTerm = searchTerm;
+  applyFilters();
 }
 
 /**
@@ -152,7 +124,7 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
   state.currentItemName = item.name;
 
   // Update active state in tree
-  document.querySelectorAll('.tree-label.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#specsTree .tree-label.active').forEach(el => el.classList.remove('active'));
   if (item.element) {
     item.element.classList.add('active');
   }
@@ -173,6 +145,9 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
   // Show spec viewer, hide welcome
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('specViewer').classList.remove('hidden');
+
+  // Notify main.js that we have a selection
+  setSpecsHasSelection(true);
 }
 
 // Expose for reference navigation
@@ -192,7 +167,7 @@ setGetCurrentVersion(getCurrentVersion);
  * Select an item by name
  */
 function selectItemByName(itemName, preferredFork) {
-  const treeNodes = document.querySelectorAll('.tree-node[data-name]');
+  const treeNodes = document.querySelectorAll('#specsTree .tree-node[data-name]');
   for (const node of treeNodes) {
     const name = node.dataset.name;
     if (name === itemName) {
@@ -329,7 +304,7 @@ async function onVersionChange(version) {
   // Try to re-select the same item in the new version
   if (itemNameToFind) {
     let itemFound = false;
-    const treeNodes = document.querySelectorAll('.tree-node[data-name]');
+    const treeNodes = document.querySelectorAll('#specsTree .tree-node[data-name]');
     for (const node of treeNodes) {
       if (node.dataset.name === itemNameToFind) {
         const itemData = node._itemData;
@@ -384,11 +359,11 @@ async function loadVersionData(version) {
 
     // Re-apply active states to buttons
     if (savedForkFilter) {
-      const forkBtn = document.querySelector(`.fork-filter-btn[data-fork="${savedForkFilter}"]`);
+      const forkBtn = document.querySelector(`#specsForkFilters .fork-filter-btn[data-fork="${savedForkFilter}"]`);
       if (forkBtn) forkBtn.classList.add('active');
     }
     if (savedTypeFilter) {
-      const typeBtn = document.querySelector(`.type-filter-btn[data-type="${savedTypeFilter}"]`);
+      const typeBtn = document.querySelector(`#specsTypeFilters .type-filter-btn[data-type="${savedTypeFilter}"]`);
       if (typeBtn) typeBtn.classList.add('active');
     }
 
@@ -508,12 +483,11 @@ export function handleDeepLink(path) {
 /**
  * Initialize specs mode
  */
-export async function init(savedVersion, searchTerm = '', selectedItem = null) {
+export async function init(savedVersion, searchTerm = '') {
   // Reset state
   state.initialLoadComplete = false;
 
   // Initialize UI
-  initSearch();
   initNavigation();
   initVersionSelector();
   initReferenceClickHandler();
@@ -537,13 +511,7 @@ export async function init(savedVersion, searchTerm = '', selectedItem = null) {
   // Apply search term if provided
   if (searchTerm) {
     state.searchTerm = searchTerm.toLowerCase();
-    document.getElementById('searchClear').classList.remove('hidden');
     applyFilters();
-  }
-
-  // Restore selected item if provided
-  if (selectedItem) {
-    selectItemByName(selectedItem, null);
   }
 
   state.initialLoadComplete = true;

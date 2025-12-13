@@ -75,19 +75,20 @@
         <button id="searchClear" class="hidden" aria-label="Clear search">&times;</button>
       </div>
 
-      <!-- Preset filters (tests mode only) -->
-      <div class="preset-filters mode-tests-only" id="presetFilters"></div>
+      <!-- Specs sidebar content -->
+      <div id="specsSidebar" class="mode-sidebar mode-specs-only">
+        <div class="fork-filters" id="specsForkFilters"></div>
+        <div class="type-filters" id="specsTypeFilters"></div>
+        <div class="tree-container" id="specsTree"></div>
+      </div>
 
-      <!-- Fork filters (both modes, but different content) -->
-      <div class="fork-filters" id="forkFilters"></div>
-
-      <!-- Type filters (specs mode only) -->
-      <div class="type-filters mode-specs-only" id="typeFilters"></div>
-
-      <!-- Runner filters (tests mode only) -->
-      <div class="runner-filters mode-tests-only" id="runnerFilters"></div>
-
-      <div class="tree-container" id="tree"></div>
+      <!-- Tests sidebar content -->
+      <div id="testsSidebar" class="mode-sidebar mode-tests-only">
+        <div class="preset-filters" id="testsPresetFilters"></div>
+        <div class="fork-filters" id="testsForkFilters"></div>
+        <div class="runner-filters" id="testsRunnerFilters"></div>
+        <div class="tree-container" id="testsTree"></div>
+      </div>
     </aside>
 
     <!-- Resize handle -->

@@ -6,7 +6,7 @@
 import { loadVersions, loadManifest, loadTestFilesProgressive } from './loader.js';
 import { buildTree, filterTree, clearFilters, setVersionGetter as setTreeVersionGetter } from './tree.js';
 import { displayTest, displayWelcome, displayTestSkeleton, updateFileBox, enableDownloadTest, clearTest, setVersionGetter as setViewerVersionGetter } from './testViewer.js';
-import { saveTestsVersion, updateHash } from '../main.js';
+import { saveTestsVersion, updateHash, setTestsHasSelection } from '../main.js';
 
 // Application state
 const state = {
@@ -33,13 +33,12 @@ setViewerVersionGetter(getCurrentVersion);
 /**
  * Initialize the application
  */
-export async function init(savedVersion, searchTerm = '', selectedTestPath = null) {
+export async function init(savedVersion, searchTerm = '') {
   // Reset state
   state.initialLoadComplete = false;
   state.loadedSuites.clear();
 
   // Initialize UI
-  setupSearch();
   setupVersionSelector();
 
   // Load versions
@@ -62,13 +61,7 @@ export async function init(savedVersion, searchTerm = '', selectedTestPath = nul
     // Apply search term if provided
     if (searchTerm) {
       state.searchTerm = searchTerm.toLowerCase();
-      document.getElementById('searchClear').classList.remove('hidden');
       filterTree(state.searchTerm);
-    }
-
-    // Restore selected test if provided
-    if (selectedTestPath) {
-      selectTestByPath(selectedTestPath);
     }
 
     state.initialLoadComplete = true;
@@ -81,7 +74,7 @@ export async function init(savedVersion, searchTerm = '', selectedTestPath = nul
  * Select a test by its path
  */
 function selectTestByPath(testPath) {
-  const node = document.querySelector(`.tree-node[data-test-path="${CSS.escape(testPath)}"]`);
+  const node = document.querySelector(`#testsTree .tree-node[data-test-path="${CSS.escape(testPath)}"]`);
   if (!node) return;
 
   // Expand parent nodes
@@ -186,6 +179,7 @@ async function onTestSelect(testPath) {
       // Use cached data - display immediately
       state.currentTest = { preset, fork, testType, testSuite, config, testCase, files: loadedFiles, testPath: fullPath };
       displayTest(state.currentTest);
+      setTestsHasSelection(true);
       return;
     }
 
@@ -200,6 +194,9 @@ async function onTestSelect(testPath) {
       fileNames: files,
       testPath: fullPath
     });
+
+    // Notify main.js that we have a selection
+    setTestsHasSelection(true);
 
     // Start loading all files in parallel
     const filePromises = loadTestFilesProgressive(state.currentVersion, fullPath, files);
@@ -261,42 +258,11 @@ async function onTestSelect(testPath) {
 }
 
 /**
- * Set up search functionality
+ * Apply search term (called from main.js)
  */
-function setupSearch() {
-  const searchInput = document.getElementById('searchInput');
-  const searchClear = document.getElementById('searchClear');
-
-  // Remove existing listeners by cloning
-  const newSearchInput = searchInput.cloneNode(true);
-  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-
-  const newSearchClear = searchClear.cloneNode(true);
-  searchClear.parentNode.replaceChild(newSearchClear, searchClear);
-
-  let searchTimeout = null;
-
-  newSearchInput.addEventListener('input', (e) => {
-    state.searchTerm = e.target.value.trim().toLowerCase();
-
-    if (state.searchTerm) {
-      newSearchClear.classList.remove('hidden');
-    } else {
-      newSearchClear.classList.add('hidden');
-    }
-
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      filterTree(state.searchTerm);
-    }, 300);
-  });
-
-  newSearchClear.addEventListener('click', () => {
-    newSearchInput.value = '';
-    state.searchTerm = '';
-    newSearchClear.classList.add('hidden');
-    filterTree('');
-  });
+export function applySearch(searchTerm) {
+  state.searchTerm = searchTerm;
+  filterTree(searchTerm);
 }
 
 /**
@@ -378,7 +344,7 @@ function navigateToTest(pathParts) {
   const testPath = `${preset}/${fork}/${testType}/${testSuite}/${config}/${testCase}`;
 
   // Look for the test node in the tree
-  const treeNodes = document.querySelectorAll('.tree-node[data-test-path]');
+  const treeNodes = document.querySelectorAll('#testsTree .tree-node[data-test-path]');
   for (const node of treeNodes) {
     if (node.dataset.testPath === testPath) {
       // Expand parent nodes

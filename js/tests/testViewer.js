@@ -107,11 +107,10 @@ export function displayTestSkeleton(test) {
   // Store current test path for URL building
   currentTestPath = testPath;
 
-  // Hide other views
+  // Hide other views (CSS handles spec viewer visibility based on mode)
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
-  document.getElementById('specViewer').classList.add('hidden');
 
   // Show test viewer
   const viewer = document.getElementById('testViewer');
@@ -294,11 +293,10 @@ export function displayTest(test) {
     currentTestPath = testPath;
   }
 
-  // Hide other views
+  // Hide other views (CSS handles spec viewer visibility based on mode)
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
-  document.getElementById('specViewer').classList.add('hidden');
 
   // Show test viewer
   const viewer = document.getElementById('testViewer');

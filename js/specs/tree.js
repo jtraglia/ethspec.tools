@@ -290,7 +290,7 @@ function createItemNode(item) {
  * Build the navigation tree
  */
 export function buildTree(data, forks) {
-  const container = document.getElementById('tree');
+  const container = document.getElementById('specsTree');
   container.innerHTML = '';
   treeNodes = [];
   clearRegistry();
@@ -325,7 +325,7 @@ export function buildTree(data, forks) {
  * Filter the tree based on fork, type, and search term
  */
 export function filterTree(forkFilter, typeFilter, searchTerm) {
-  const container = document.getElementById('tree');
+  const container = document.getElementById('specsTree');
   const categoryNodes = container.querySelectorAll(':scope > .tree-node');
 
   categoryNodes.forEach(categoryNode => {

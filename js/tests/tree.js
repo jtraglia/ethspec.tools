@@ -33,7 +33,7 @@ export function buildTree(manifest, onTestSelect) {
   onTestSelectCallback = onTestSelect;
   treeData = manifest;
 
-  const treeContainer = document.getElementById('tree');
+  const treeContainer = document.getElementById('testsTree');
   treeContainer.innerHTML = '';
 
   // Build preset filters
@@ -69,7 +69,7 @@ export function buildTree(manifest, onTestSelect) {
  * Build preset filter buttons
  */
 function buildPresetFilters(manifest) {
-  const presetFiltersContainer = document.getElementById('presetFilters');
+  const presetFiltersContainer = document.getElementById('testsPresetFilters');
   presetFiltersContainer.innerHTML = '';
 
   // Get presets in specific order: general, minimal, mainnet
@@ -110,7 +110,7 @@ function buildPresetFilters(manifest) {
  * Build fork filter buttons
  */
 function buildForkFilters(manifest) {
-  const forkFiltersContainer = document.getElementById('forkFilters');
+  const forkFiltersContainer = document.getElementById('testsForkFilters');
   forkFiltersContainer.innerHTML = '';
 
   // Collect all unique forks
@@ -172,7 +172,7 @@ function buildForkFilters(manifest) {
  * Build runner filter buttons
  */
 function buildRunnerFilters(manifest) {
-  const runnerFiltersContainer = document.getElementById('runnerFilters');
+  const runnerFiltersContainer = document.getElementById('testsRunnerFilters');
   runnerFiltersContainer.innerHTML = '';
 
   // Collect all unique runners (test types)
@@ -410,8 +410,8 @@ function createTreeNode(nodeData) {
     label.addEventListener('click', (e) => {
       e.stopPropagation();
 
-      // Remove active class from all labels
-      document.querySelectorAll('.tree-label.active').forEach(el => {
+      // Remove active class from all labels in tests tree
+      document.querySelectorAll('#testsTree .tree-label.active').forEach(el => {
         el.classList.remove('active');
       });
 
@@ -451,7 +451,7 @@ function toggleNode(container, icon) {
  */
 function getTreeNodes() {
   if (!cachedTreeNodes) {
-    cachedTreeNodes = document.querySelectorAll('.tree-node');
+    cachedTreeNodes = document.querySelectorAll('#testsTree .tree-node');
   }
   return cachedTreeNodes;
 }
@@ -461,7 +461,7 @@ function getTreeNodes() {
  */
 function getPresetTreeNodes() {
   if (!cachedPresetTreeNodes) {
-    cachedPresetTreeNodes = document.querySelectorAll('.tree-node[data-type="preset"]');
+    cachedPresetTreeNodes = document.querySelectorAll('#testsTree .tree-node[data-type="preset"]');
   }
   return cachedPresetTreeNodes;
 }
@@ -471,7 +471,7 @@ function getPresetTreeNodes() {
  */
 function getPresetButtons() {
   if (!cachedPresetButtons) {
-    cachedPresetButtons = document.querySelectorAll('.preset-filter-btn');
+    cachedPresetButtons = document.querySelectorAll('#testsPresetFilters .preset-filter-btn');
   }
   return cachedPresetButtons;
 }
@@ -481,7 +481,7 @@ function getPresetButtons() {
  */
 function getForkButtons() {
   if (!cachedForkButtons) {
-    cachedForkButtons = document.querySelectorAll('.fork-filter-btn');
+    cachedForkButtons = document.querySelectorAll('#testsForkFilters .fork-filter-btn');
   }
   return cachedForkButtons;
 }
@@ -491,7 +491,7 @@ function getForkButtons() {
  */
 function getRunnerButtons() {
   if (!cachedRunnerButtons) {
-    cachedRunnerButtons = document.querySelectorAll('.runner-filter-btn');
+    cachedRunnerButtons = document.querySelectorAll('#testsRunnerFilters .runner-filter-btn');
   }
   return cachedRunnerButtons;
 }
