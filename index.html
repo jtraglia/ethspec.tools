@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ethereum Consensus Specifications</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Apply dark mode immediately to prevent flash of light content -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('ethspec-tools-dark-mode');
+      var isDark = saved !== null ? saved === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+
+  <!-- Prism for syntax highlighting (Python for specs, YAML for tests) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- JSZip for creating zip files (tests download) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+  <header class="header-container">
+    <div class="header-left">
+      <h1>Ethereum Consensus Specifications</h1>
+      <select id="versionSelect" class="version-select" aria-label="Select version">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <div class="header-right">
+      <!-- Navigation buttons (specs mode only) -->
+      <div id="navigationBox" class="navigation-box mode-specs-only">
+        <button id="navBack" class="nav-button" title="Go back" disabled>
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <button id="navForward" class="nav-button" title="Go forward" disabled>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="mode-toggle" role="group" aria-label="Mode toggle">
+        <button id="modeSpecs" class="mode-toggle-btn active" data-mode="specs">Specs</button>
+        <button id="modeTests" class="mode-toggle-btn" data-mode="tests">Tests</button>
+      </div>
+
+      <!-- Dark mode toggle -->
+      <div class="toggle-container" role="group" aria-label="Theme toggle">
+        <i class="fas fa-sun" aria-hidden="true"></i>
+        <label class="toggle-switch" for="darkModeToggle">
+          <input type="checkbox" id="darkModeToggle" aria-label="Toggle dark mode">
+          <span class="toggle-slider" aria-hidden="true"></span>
+        </label>
+        <i class="fas fa-moon" aria-hidden="true"></i>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Sidebar navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search..." aria-label="Search">
+        <button id="searchClear" class="hidden" aria-label="Clear search">&times;</button>
+      </div>
+
+      <!-- Preset filters (tests mode only) -->
+      <div class="preset-filters mode-tests-only" id="presetFilters"></div>
+
+      <!-- Fork filters (both modes, but different content) -->
+      <div class="fork-filters" id="forkFilters"></div>
+
+      <!-- Type filters (specs mode only) -->
+      <div class="type-filters mode-specs-only" id="typeFilters"></div>
+
+      <!-- Runner filters (tests mode only) -->
+      <div class="runner-filters mode-tests-only" id="runnerFilters"></div>
+
+      <div class="tree-container" id="tree"></div>
+    </aside>
+
+    <!-- Resize handle -->
+    <div class="resize-handle" id="resizeHandle"></div>
+
+    <!-- Main content area -->
+    <main class="content">
+      <!-- Welcome screen -->
+      <div id="welcome" class="welcome-screen">
+        <h2>Welcome</h2>
+        <p>Select an item from the navigation tree to view its details.</p>
+      </div>
+
+      <!-- Spec viewer (specs mode) -->
+      <div id="specViewer" class="spec-viewer hidden">
+        <div class="spec-header">
+          <h2 id="specTitle"></h2>
+        </div>
+        <div class="breadcrumb" id="specBreadcrumb"></div>
+        <div id="specContent" class="spec-content"></div>
+      </div>
+
+      <!-- Test viewer (tests mode) -->
+      <div id="testViewer" class="test-viewer hidden">
+        <div class="test-header">
+          <h2 id="testTitle"></h2>
+          <button id="downloadTestButton" class="download-test-button" title="Download test as zip">
+            <i class="fas fa-download"></i> Download Test
+          </button>
+          <button id="copyTestLinkButton" class="copy-test-link-button" title="Copy link to test">
+            <i class="fas fa-link"></i>
+          </button>
+        </div>
+        <div class="breadcrumb" id="testBreadcrumb"></div>
+        <div id="testContent" class="test-content"></div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading" class="loading hidden">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Loading data...</span>
+      </div>
+
+      <!-- Error state -->
+      <div id="error" class="error-message hidden"></div>
+    </main>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
