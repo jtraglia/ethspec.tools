@@ -139,10 +139,20 @@ async function switchMode(newMode) {
   document.getElementById('searchClear').classList.toggle('hidden', !savedSearch);
 
   // Initialize mode if first time (lazy initialization)
-  if (newMode === 'specs' && !state.specsInitialized) {
-    await initSpecsMode(savedSearch);
-  } else if (newMode === 'tests' && !state.testsInitialized) {
-    await initTestsMode(savedSearch);
+  if (newMode === 'specs') {
+    if (!state.specsInitialized) {
+      await initSpecsMode(savedSearch);
+    } else {
+      // Repopulate dropdown with specs versions
+      state.specsModule.populateVersionDropdown();
+    }
+  } else {
+    if (!state.testsInitialized) {
+      await initTestsMode(savedSearch);
+    } else {
+      // Repopulate dropdown with tests versions
+      state.testsModule.populateVersionDropdown();
+    }
   }
 
   // Update welcome screen visibility based on whether the new mode has a selection

@@ -258,7 +258,7 @@ function compareVersions(a, b) {
 /**
  * Populate the version dropdown
  */
-function populateVersionDropdown() {
+export function populateVersionDropdown() {
   const select = document.getElementById('versionSelect');
   select.innerHTML = '';
 

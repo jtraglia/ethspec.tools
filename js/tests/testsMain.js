@@ -102,7 +102,7 @@ function selectTestByPath(testPath) {
 /**
  * Populate the version dropdown
  */
-function populateVersionDropdown() {
+export function populateVersionDropdown() {
   const versionSelect = document.getElementById('versionSelect');
   versionSelect.innerHTML = '';
 
