@@ -181,7 +181,7 @@ function selectItemByName(itemName, preferredFork) {
             const parentNode = parent.previousElementSibling;
             if (parentNode) {
               const icon = parentNode.querySelector('.tree-icon');
-              if (icon) icon.textContent = '▼';
+              if (icon) icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
             }
           }
           parent = parent.parentElement;

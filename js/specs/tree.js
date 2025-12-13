@@ -190,7 +190,7 @@ function createTreeNode(label, hasChildren = false, isLeaf = false) {
   if (hasChildren) {
     icon.innerHTML = '<i class="fas fa-chevron-right"></i>';
   } else if (isLeaf) {
-    icon.innerHTML = '<i class="fas fa-file"></i>';
+    icon.innerHTML = '<i class="fas fa-cube"></i>';
   }
 
   const text = document.createElement('span');
@@ -226,6 +226,12 @@ function createItemNode(item) {
 
   const labelEl = document.createElement('div');
   labelEl.className = 'tree-label';
+
+  // Add icon
+  const icon = document.createElement('span');
+  icon.className = 'tree-icon';
+  icon.innerHTML = '<i class="fas fa-cube"></i>';
+  labelEl.appendChild(icon);
 
   // Use code element for item name
   const code = document.createElement('code');

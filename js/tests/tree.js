@@ -364,7 +364,7 @@ function createTreeNode(nodeData) {
   if (nodeData.children && nodeData.children.length > 0) {
     icon.innerHTML = '<i class="fas fa-chevron-right"></i>';
   } else {
-    icon.innerHTML = '<i class="fas fa-file"></i>';
+    icon.innerHTML = '<i class="fas fa-cube"></i>';
   }
 
   label.appendChild(icon);
