@@ -187,9 +187,14 @@ function createTreeNode(label, hasChildren = false, isLeaf = false) {
 
   const icon = document.createElement('span');
   icon.className = 'tree-icon';
-  icon.textContent = hasChildren ? '▶' : (isLeaf ? '•' : '');
+  if (hasChildren) {
+    icon.innerHTML = '<i class="fas fa-chevron-right"></i>';
+  } else if (isLeaf) {
+    icon.innerHTML = '<i class="fas fa-file"></i>';
+  }
 
   const text = document.createElement('span');
+  text.className = 'tree-item-name';
   text.textContent = label;
 
   labelEl.appendChild(icon);
@@ -205,7 +210,7 @@ function createTreeNode(label, hasChildren = false, isLeaf = false) {
       e.stopPropagation();
       const isCollapsed = children.classList.contains('collapsed');
       children.classList.toggle('collapsed');
-      icon.textContent = isCollapsed ? '▼' : '▶';
+      icon.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-right"></i>';
     });
   }
 
@@ -365,11 +370,11 @@ export function filterTree(forkFilter, typeFilter, searchTerm) {
       // Auto-expand category if searching or if type filter matches this category
       if (searchTerm || (typeFilter && category === typeFilter)) {
         if (children) children.classList.remove('collapsed');
-        if (icon) icon.textContent = '▼';
+        if (icon) icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
       } else if (!typeFilter && !searchTerm) {
         // Collapse when filters are cleared
         if (children) children.classList.add('collapsed');
-        if (icon) icon.textContent = '▶';
+        if (icon) icon.innerHTML = '<i class="fas fa-chevron-right"></i>';
       }
     }
   });

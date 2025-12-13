@@ -372,6 +372,7 @@ function createTreeNode(nodeData) {
   // Label text
   const text = document.createElement('span');
   text.textContent = nodeData.label;
+  text.className = 'tree-item-name';
   label.appendChild(text);
 
   // Count badge
