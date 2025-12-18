@@ -1,1 +1,5 @@
 data
+*.log
+output_*.txt
+.nightly-sha
+consensus-specs

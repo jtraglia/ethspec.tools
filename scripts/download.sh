@@ -45,61 +45,72 @@ echo "Version: $VERSION"
 echo "Logfile: $LOGFILE"
 echo ""
 
-# Initialize consensus-specs submodule if not already initialized
-echo "Initializing consensus-specs submodule..."
-git submodule update --init --recursive consensus-specs
+# Clone consensus-specs repo
+REPO_URL="https://github.com/ethereum/consensus-specs.git"
+CLONE_DIR="$PROJECT_ROOT/consensus-specs"
 
-# Change to consensus-specs directory
-cd consensus-specs
+# Clean up any existing clone
+rm -rf "$CLONE_DIR"
 
 # Special handling for v1.6.0 - use specific commit with ssz-debug-tools changes
 if [ "$VERSION" = "v1.6.0" ]; then
   COMMIT="ab09e2e94fb61bc8cf3a24747db0473c2405b2ca"
 
-  # Fetch master branch to get the latest commits (commit is on master)
-  echo "Fetching master branch from origin..."
-  git fetch origin master
+  echo "Cloning consensus-specs..."
+  git clone "$REPO_URL" "$CLONE_DIR"
+  cd "$CLONE_DIR"
 
   echo "Checking out commit $COMMIT..."
   if ! git checkout "$COMMIT"; then
     echo ""
     echo "Error: Failed to checkout commit $COMMIT"
+    rm -rf "$CLONE_DIR"
     exit 1
   fi
 else
-  # For other versions, fetch tags and checkout the tag
-  echo "Fetching tags from origin..."
-  git fetch origin --tags
-
-  echo "Checking out tag $VERSION..."
-  if ! git checkout "$VERSION" 2>/dev/null; then
+  echo "Cloning consensus-specs at tag $VERSION..."
+  if ! git clone --branch "$VERSION" --depth 1 "$REPO_URL" "$CLONE_DIR" 2>/dev/null; then
     echo ""
     echo "Error: Tag '$VERSION' not found."
     echo ""
+    # Clone to check available tags
+    git clone --bare --filter=blob:none "$REPO_URL" "$CLONE_DIR.bare" 2>/dev/null
     echo "Available tags matching '$VERSION':"
-    git tag -l "*${VERSION}*" | head -20
+    git -C "$CLONE_DIR.bare" tag -l "*${VERSION}*" | head -20
     echo ""
     echo "Recent tags (last 20):"
-    git tag -l "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | sort -V | tail -20
+    git -C "$CLONE_DIR.bare" tag -l "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | sort -V | tail -20
+    rm -rf "$CLONE_DIR.bare"
     exit 1
   fi
+  cd "$CLONE_DIR"
 fi
 
-# Clean previous build
-echo "Cleaning previous build..."
-make clean
+# Apply patch to generate pyspec.json
+echo "Applying patch..."
+git apply "$PROJECT_ROOT/write_pyspec_dict.patch"
 
 # Build pyspec
 echo "Building pyspec..."
 make _pyspec
 
+# Copy pyspec.json to versioned directory
+echo "Copying pyspec.json..."
+mkdir -p "$PROJECT_ROOT/pyspec/$VERSION"
+cp pyspec.json "$PROJECT_ROOT/pyspec/$VERSION/pyspec.json"
+
 # Return to root directory
-cd ..
+cd "$PROJECT_ROOT"
 
 # Run prepare script
 echo ""
 echo "Running prepare script..."
 node scripts/prepare.js "$VERSION"
+
+# Clean up cloned repo
+echo ""
+echo "Cleaning up..."
+rm -rf "$CLONE_DIR"
 
 echo ""
 echo "✓ All done!"
