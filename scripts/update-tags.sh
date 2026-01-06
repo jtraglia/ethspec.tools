@@ -66,7 +66,7 @@ for version in $NEW_TAGS; do
   # Check if already downloaded (pyspec directory exists)
   if [ -d "pyspec/$version" ]; then
     log "Skipping $version (already exists)"
-    ((SKIPPED++))
+    ((SKIPPED++)) || true
     continue
   fi
 
@@ -74,10 +74,10 @@ for version in $NEW_TAGS; do
 
   if ./scripts/download.sh "$version"; then
     log "Successfully processed $version"
-    ((PROCESSED++))
+    ((PROCESSED++)) || true
   else
     log "ERROR: Failed to process $version"
-    ((FAILED++))
+    ((FAILED++)) || true
   fi
 done
 
