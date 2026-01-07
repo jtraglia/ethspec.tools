@@ -72,7 +72,7 @@ for version in $NEW_TAGS; do
 
   log "Processing $version..."
 
-  if ./scripts/download.sh "$version"; then
+  if "$SCRIPT_DIR/download.sh" "$version"; then
     log "Successfully processed $version"
     ((PROCESSED++)) || true
   else
