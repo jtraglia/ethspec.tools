@@ -1,4 +1,5 @@
 #!/bin/bash
+source "$HOME/.local/bin/env"
 
 # Download and prepare Ethereum consensus specs tests
 #
