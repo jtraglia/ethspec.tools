@@ -103,6 +103,52 @@ cp pyspec.json "$PROJECT_ROOT/pyspec/$VERSION/pyspec.json"
 # Return to root directory
 cd "$PROJECT_ROOT"
 
+# Update pyspec/versions.json
+echo "Updating pyspec/versions.json..."
+node -e "
+const fs = require('fs');
+const versionsPath = '$PROJECT_ROOT/pyspec/versions.json';
+let versions = [];
+if (fs.existsSync(versionsPath)) {
+  versions = JSON.parse(fs.readFileSync(versionsPath, 'utf8'));
+}
+const newVersion = '$VERSION';
+if (!versions.includes(newVersion)) {
+  versions.push(newVersion);
+}
+// Sort versions: nightly first, then semver descending (release > beta > alpha)
+versions.sort((a, b) => {
+  if (a === 'nightly') return -1;
+  if (b === 'nightly') return 1;
+  // Parse version strings
+  const parseVersion = (v) => {
+    const match = v.match(/^v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)\.(\d+))?$/);
+    if (!match) return null;
+    return {
+      major: parseInt(match[1]),
+      minor: parseInt(match[2]),
+      patch: parseInt(match[3]),
+      preType: match[4] || 'release',
+      preNum: match[5] ? parseInt(match[5]) : 0
+    };
+  };
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  if (!pa || !pb) return a.localeCompare(b);
+  // Compare major.minor.patch descending
+  if (pa.major !== pb.major) return pb.major - pa.major;
+  if (pa.minor !== pb.minor) return pb.minor - pa.minor;
+  if (pa.patch !== pb.patch) return pb.patch - pa.patch;
+  // Same base version: release > beta > alpha
+  const typeOrder = { release: 0, beta: 1, alpha: 2 };
+  if (pa.preType !== pb.preType) return typeOrder[pa.preType] - typeOrder[pb.preType];
+  // Same pre-release type: higher number first
+  return pb.preNum - pa.preNum;
+});
+fs.writeFileSync(versionsPath, JSON.stringify(versions, null, 2) + '\n');
+console.log('Updated pyspec/versions.json');
+"
+
 # Run prepare script
 echo ""
 echo "Running prepare script..."

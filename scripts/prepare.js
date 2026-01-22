@@ -391,6 +391,44 @@ function buildManifest(testCases) {
 
 
 /**
+ * Sort versions: nightly first, then semver descending (release > beta > alpha)
+ */
+function sortVersions(versions) {
+  return versions.sort((a, b) => {
+    if (a === 'nightly') return -1;
+    if (b === 'nightly') return 1;
+
+    const parseVersion = (v) => {
+      const match = v.match(/^v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)\.(\d+))?$/);
+      if (!match) return null;
+      return {
+        major: parseInt(match[1]),
+        minor: parseInt(match[2]),
+        patch: parseInt(match[3]),
+        preType: match[4] || 'release',
+        preNum: match[5] ? parseInt(match[5]) : 0
+      };
+    };
+
+    const pa = parseVersion(a);
+    const pb = parseVersion(b);
+    if (!pa || !pb) return a.localeCompare(b);
+
+    // Compare major.minor.patch descending
+    if (pa.major !== pb.major) return pb.major - pa.major;
+    if (pa.minor !== pb.minor) return pb.minor - pa.minor;
+    if (pa.patch !== pb.patch) return pb.patch - pa.patch;
+
+    // Same base version: release > beta > alpha
+    const typeOrder = { release: 0, beta: 1, alpha: 2 };
+    if (pa.preType !== pb.preType) return typeOrder[pa.preType] - typeOrder[pb.preType];
+
+    // Same pre-release type: higher number first
+    return pb.preNum - pa.preNum;
+  });
+}
+
+/**
  * Update versions.json file
  */
 function updateVersionsFile(dataDir, version) {
@@ -405,8 +443,10 @@ function updateVersionsFile(dataDir, version) {
   // Add new version if not already present
   if (!versions.versions.includes(version)) {
     versions.versions.push(version);
-    versions.versions.sort().reverse(); // Sort descending (newest first)
   }
+
+  // Sort versions correctly
+  versions.versions = sortVersions(versions.versions);
 
   fs.writeFileSync(versionsPath, JSON.stringify(versions, null, 2));
   console.log(`Updated versions list: ${versionsPath}`);
