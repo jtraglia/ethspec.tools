@@ -5,8 +5,22 @@ http:
       entryPoints:
         - websecure
       service: beacon-api
+      middlewares:
+        - cors
       tls:
         certResolver: letsencrypt
+
+  middlewares:
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "https://jtraglia.github.io"
+        accessControlMaxAge: 86400
 
   services:
     beacon-api:
