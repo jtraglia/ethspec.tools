@@ -1,0 +1,17 @@
+http:
+  routers:
+    beacon-api:
+      rule: "Host(`beacon-api.ethspec.tools`)"
+      entryPoints:
+        - websecure
+      service: beacon-api
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    beacon-api:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.4.137:5052"
+        responseForwarding:
+          flushInterval: "-1"
