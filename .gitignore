@@ -3,3 +3,5 @@ data
 output_*.txt
 .nightly-sha
 consensus-specs
+pyspec/
+
