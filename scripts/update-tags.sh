@@ -70,6 +70,17 @@ for version in $NEW_TAGS; do
     continue
   fi
 
+  # Check if the release exists (not just the tag)
+  # Tags are created immediately, but releases with test assets take ~12 hours to build
+  RELEASE_URL="https://api.github.com/repos/ethereum/consensus-specs/releases/tags/$version"
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$RELEASE_URL")
+
+  if [ "$HTTP_STATUS" != "200" ]; then
+    log "Skipping $version (release not yet available, tag exists but release returns HTTP $HTTP_STATUS)"
+    ((SKIPPED++)) || true
+    continue
+  fi
+
   log "Processing $version..."
 
   if "$SCRIPT_DIR/download.sh" "$version"; then
