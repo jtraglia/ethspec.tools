@@ -32,6 +32,11 @@
 <body>
   <header class="header-container">
     <div class="header-left">
+      <!-- Hamburger menu for mobile -->
+      <button id="menuToggle" class="menu-toggle" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+      <i class="fab fa-ethereum mobile-logo" aria-hidden="true"></i>
       <h1>Ethereum Consensus Specifications</h1>
       <select id="versionSelect" class="version-select" aria-label="Select version">
         <option value="">Loading...</option>
@@ -39,11 +44,6 @@
     </div>
 
     <div class="header-right">
-      <!-- Hamburger menu for mobile -->
-      <button id="menuToggle" class="menu-toggle" aria-label="Toggle navigation">
-        <i class="fas fa-bars"></i>
-      </button>
-
       <!-- Navigation buttons (specs mode only) -->
       <div id="navigationBox" class="navigation-box mode-specs-only">
         <button id="navBack" class="nav-button" title="Go back" disabled>

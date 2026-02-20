@@ -1283,6 +1283,13 @@ pre[class*="language-"] {
   background-color: var(--hover-bg);
 }
 
+/* Ethereum logo shown only on mobile */
+.mobile-logo {
+  display: none;
+  font-size: 1.4rem;
+  color: var(--link-color);
+}
+
 /* ============================================
    SIDEBAR OVERLAY (mobile backdrop)
    ============================================ */
@@ -1333,8 +1340,13 @@ pre[class*="language-"] {
     min-height: 52px;
   }
 
+  /* Hide title, show Ethereum logo on mobile */
   .header-container h1 {
-    font-size: 1rem;
+    display: none;
+  }
+
+  .mobile-logo {
+    display: block;
   }
 
   .header-right {
@@ -1462,10 +1474,6 @@ pre[class*="language-"] {
 @media (max-width: 480px) {
   .header-container {
     padding: 0 0.75rem;
-  }
-
-  .header-container h1 {
-    font-size: 0.85rem;
   }
 
   .version-select {
