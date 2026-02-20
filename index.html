@@ -39,6 +39,11 @@
     </div>
 
     <div class="header-right">
+      <!-- Hamburger menu for mobile -->
+      <button id="menuToggle" class="menu-toggle" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+
       <!-- Navigation buttons (specs mode only) -->
       <div id="navigationBox" class="navigation-box mode-specs-only">
         <button id="navBack" class="nav-button" title="Go back" disabled>
@@ -68,6 +73,9 @@
   </header>
 
   <div class="main-container">
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar navigation -->
     <aside class="sidebar" id="sidebar">
       <div class="search-container">

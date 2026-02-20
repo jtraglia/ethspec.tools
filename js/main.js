@@ -6,6 +6,8 @@
 import { initDarkMode } from './darkMode.js';
 import { initResizable } from './resizable.js';
 
+const MOBILE_BREAKPOINT = 768;
+
 // Application state
 const state = {
   mode: 'specs', // 'specs' or 'tests'
@@ -198,6 +200,80 @@ async function initTestsMode(searchTerm = '') {
 }
 
 /**
+ * Check if we're on a mobile viewport
+ */
+function isMobile() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+/**
+ * Toggle mobile sidebar open/closed
+ */
+function toggleMobileSidebar(open) {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  if (open === undefined) {
+    open = !sidebar.classList.contains('open');
+  }
+
+  sidebar.classList.toggle('open', open);
+  overlay.classList.toggle('active', open);
+}
+
+/**
+ * Close the mobile sidebar
+ */
+function closeMobileSidebar() {
+  toggleMobileSidebar(false);
+}
+
+/**
+ * Initialize mobile sidebar toggle behavior
+ */
+function initMobileSidebar() {
+  const menuToggle = document.getElementById('menuToggle');
+  const overlay = document.getElementById('sidebarOverlay');
+  const sidebar = document.getElementById('sidebar');
+
+  // Hamburger button toggles sidebar
+  menuToggle.addEventListener('click', () => {
+    toggleMobileSidebar();
+  });
+
+  // Clicking overlay closes sidebar
+  overlay.addEventListener('click', closeMobileSidebar);
+
+  // Close sidebar when a tree leaf item is clicked on mobile
+  sidebar.addEventListener('click', (e) => {
+    if (!isMobile()) return;
+
+    const label = e.target.closest('.tree-label');
+    if (!label) return;
+
+    // Check if this is a leaf node (no children or has tree-item-name class)
+    const node = label.closest('.tree-node');
+    if (!node) return;
+
+    const children = node.querySelector('.tree-children');
+    const isLeaf = !children || children.children.length === 0;
+    const isItemName = label.querySelector('.tree-item-name');
+
+    if (isLeaf || isItemName) {
+      // Small delay so the click handler fires first
+      setTimeout(closeMobileSidebar, 150);
+    }
+  });
+
+  // Close sidebar on window resize to desktop
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      closeMobileSidebar();
+    }
+  });
+}
+
+/**
  * Initialize mode toggle buttons
  */
 function initModeToggle() {
@@ -218,6 +294,7 @@ async function init() {
   initResizable();
   initModeToggle();
   initSearch();
+  initMobileSidebar();
 
   // Parse URL to determine initial mode
   const { mode, path } = parseHash();
