@@ -283,6 +283,13 @@ function renderCodeView(item, container) {
   container.innerHTML = '';
 
   const hasMultipleForks = item.forks.length >= 2;
+  const isSideBySideDiff = hasMultipleForks && forkDiffState.mode === 'diff' && forkDiffState.diffViewMode === 'side-by-side';
+
+  // Widen the viewer for side-by-side diffs
+  const viewer = document.getElementById('specViewer');
+  if (viewer) {
+    viewer.classList.toggle('wide-diff', isSideBySideDiff);
+  }
 
   // Add toggle bar for multi-fork items
   const toggleBar = createForkDiffToggle(item, container);

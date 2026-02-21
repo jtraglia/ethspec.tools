@@ -559,6 +559,10 @@ input:checked + .toggle-slider:before {
   max-width: 1200px;
 }
 
+.spec-viewer.wide-diff {
+  max-width: none;
+}
+
 .spec-header {
   display: flex;
   justify-content: space-between;
