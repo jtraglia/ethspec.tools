@@ -100,6 +100,10 @@ echo "Copying pyspec.json..."
 mkdir -p "$PROJECT_ROOT/pyspec/$VERSION"
 cp pyspec.json "$PROJECT_ROOT/pyspec/$VERSION/pyspec.json"
 
+# Extract test function source code
+echo "Extracting test function sources..."
+python3 "$PROJECT_ROOT/scripts/extract_test_sources.py" "$CLONE_DIR" "$PROJECT_ROOT/pyspec/$VERSION/test_sources.json" || echo "Warning: Failed to extract test sources (non-fatal)"
+
 # Return to root directory
 cd "$PROJECT_ROOT"
 

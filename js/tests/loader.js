@@ -76,6 +76,20 @@ export async function loadTestFiles(version, testPath, files) {
 }
 
 /**
+ * Load test function source code for a version
+ * Returns null if not available (older versions, extraction failed)
+ */
+export async function loadTestSources(version) {
+  try {
+    const response = await fetch(`data/${version}/test_sources.json`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Load test files progressively (fetches all in parallel)
  * @param {string} version - Version like "v1.6.0-beta.0"
  * @param {string} testPath - Path like "general/deneb/kzg/verify_blob_kzg_proof/kzg-mainnet/test_name"

@@ -352,6 +352,83 @@ export function displayTest(test) {
 }
 
 /**
+ * Display the test function source code at the top of the test content
+ * @param {Object|null} testSource - { source, key } or null if unavailable
+ */
+export function displayTestSource(testSource) {
+  // Remove any existing test source box
+  const existing = document.getElementById('testSourceBox');
+  if (existing) existing.remove();
+
+  if (!testSource || !testSource.source) return;
+
+  const content = document.getElementById('testContent');
+
+  // Build the source file path label from the key (remove function name)
+  const keyParts = testSource.key.split('/');
+  const filePath = keyParts.slice(0, -1).join('/') + '.py';
+
+  const container = document.createElement('div');
+  container.className = 'file-box test-source-box';
+  container.id = 'testSourceBox';
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'file-header';
+
+  const icon = document.createElement('i');
+  icon.className = 'fas fa-chevron-down file-toggle-icon';
+
+  const iconLabel = document.createElement('i');
+  iconLabel.className = 'fas fa-code';
+  iconLabel.style.color = 'var(--link-color)';
+  iconLabel.style.fontSize = '0.85rem';
+
+  const label = document.createElement('span');
+  label.className = 'file-name';
+  label.textContent = filePath;
+
+  header.appendChild(icon);
+  header.appendChild(iconLabel);
+  header.appendChild(label);
+
+  // Content (expanded by default)
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'file-content';
+
+  const codeBox = document.createElement('pre');
+  codeBox.className = 'test-code-box';
+
+  const codeEl = document.createElement('code');
+  codeEl.className = 'language-python';
+  codeEl.textContent = testSource.source;
+
+  codeBox.appendChild(codeEl);
+  contentContainer.appendChild(codeBox);
+
+  // Apply Prism highlighting if available
+  if (window.Prism) {
+    Prism.highlightElement(codeEl);
+  }
+
+  // Toggle functionality
+  header.addEventListener('click', () => {
+    contentContainer.classList.toggle('collapsed');
+    if (contentContainer.classList.contains('collapsed')) {
+      icon.className = 'fas fa-chevron-right file-toggle-icon';
+    } else {
+      icon.className = 'fas fa-chevron-down file-toggle-icon';
+    }
+  });
+
+  container.appendChild(header);
+  container.appendChild(contentContainer);
+
+  // Insert at the top of test content
+  content.insertBefore(container, content.firstChild);
+}
+
+/**
  * Create a collapsible file box skeleton (loading state)
  * @param {string} filename - The filename
  * @param {boolean} hasYamlCompanion - Whether this file has a YAML companion

@@ -852,6 +852,20 @@ input:checked + .toggle-slider:before {
   gap: 1rem;
 }
 
+/* Test function source box */
+.test-source-box {
+  border-color: var(--link-color);
+  border-width: 1.5px;
+}
+
+.test-source-box .file-header {
+  background-color: rgba(79, 172, 254, 0.08);
+}
+
+[data-theme="dark"] .test-source-box .file-header {
+  background-color: rgba(79, 172, 254, 0.12);
+}
+
 /* File size badge (tests mode) */
 .file-size {
   font-size: 0.85rem;

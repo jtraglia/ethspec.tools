@@ -3,9 +3,9 @@
  * Handles initialization and state management for the tests viewer
  */
 
-import { loadVersions, loadManifest, loadTestFilesProgressive } from './loader.js';
+import { loadVersions, loadManifest, loadTestFilesProgressive, loadTestSources } from './loader.js';
 import { buildTree, filterTree, clearFilters, setVersionGetter as setTreeVersionGetter } from './tree.js';
-import { displayTest, displayWelcome, displayTestSkeleton, updateFileBox, enableDownloadTest, clearTest, setVersionGetter as setViewerVersionGetter } from './testViewer.js';
+import { displayTest, displayWelcome, displayTestSkeleton, updateFileBox, enableDownloadTest, clearTest, setVersionGetter as setViewerVersionGetter, displayTestSource } from './testViewer.js';
 import { saveTestsVersion, updateHash, setTestsHasSelection } from '../main.js';
 
 // Application state
@@ -15,6 +15,8 @@ const state = {
   manifest: null,
   currentTest: null,
   loadedSuites: new Map(),
+  testSources: null,
+  testSourcesPromise: null,
   searchTerm: '',
   initialLoadComplete: false
 };
@@ -154,6 +156,15 @@ async function loadVersionData(version) {
 
   try {
     state.manifest = await loadManifest(version);
+
+    // Load test sources in background (non-blocking)
+    state.testSources = null;
+    state.testSourcesPromise = loadTestSources(version).then(sources => {
+      state.testSources = sources;
+    }).catch(() => {
+      state.testSources = null;
+    });
+
     displayWelcome(state.manifest);
     buildTree(state.manifest, onTestSelect);
 
@@ -165,12 +176,70 @@ async function loadVersionData(version) {
 }
 
 /**
+ * Look up test function source code
+ */
+function lookupTestSource(fork, testType, testSuite, testCase) {
+  const sources = state.testSources;
+  if (!sources || !sources.functions) return null;
+
+  // Strategy 1: Exact path match (fork/testType/testSuite/testCase)
+  const exactKey = `${fork}/${testType}/${testSuite}/${testCase}`;
+  if (sources.functions[exactKey]) {
+    return { source: sources.functions[exactKey], key: exactKey };
+  }
+
+  // Strategy 2: Use by_name index to find candidates, then disambiguate
+  if (sources.by_name && sources.by_name[testCase]) {
+    const candidates = sources.by_name[testCase];
+
+    // Prefer candidate matching fork and testSuite
+    for (const key of candidates) {
+      if (key.startsWith(fork + '/') && key.includes('/' + testSuite + '/')) {
+        return { source: sources.functions[key], key };
+      }
+    }
+
+    // Prefer candidate matching just fork
+    for (const key of candidates) {
+      if (key.startsWith(fork + '/')) {
+        return { source: sources.functions[key], key };
+      }
+    }
+
+    // Prefer candidate where module name contains testSuite
+    for (const key of candidates) {
+      const parts = key.split('/');
+      const moduleName = parts[parts.length - 2]; // second to last
+      if (moduleName && moduleName.includes(testSuite)) {
+        return { source: sources.functions[key], key };
+      }
+    }
+
+    // Fall back to first candidate
+    if (candidates.length === 1) {
+      return { source: sources.functions[candidates[0]], key: candidates[0] };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Handle test selection from tree
  */
 async function onTestSelect(testPath) {
   const { preset, fork, testType, testSuite, config, testCase, testPath: fullPath, files } = testPath;
 
   try {
+    // Wait for test sources if still loading
+    if (state.testSourcesPromise) {
+      await state.testSourcesPromise;
+      state.testSourcesPromise = null;
+    }
+
+    // Look up test function source
+    const testSource = lookupTestSource(fork, testType, testSuite, testCase);
+
     // Check cache
     const cacheKey = `${state.currentVersion}:${fullPath}`;
     let loadedFiles = state.loadedSuites.get(cacheKey);
@@ -179,6 +248,7 @@ async function onTestSelect(testPath) {
       // Use cached data - display immediately
       state.currentTest = { preset, fork, testType, testSuite, config, testCase, files: loadedFiles, testPath: fullPath };
       displayTest(state.currentTest);
+      displayTestSource(testSource);
       setTestsHasSelection(true);
       return;
     }
@@ -194,6 +264,7 @@ async function onTestSelect(testPath) {
       fileNames: files,
       testPath: fullPath
     });
+    displayTestSource(testSource);
 
     // Notify main.js that we have a selection
     setTestsHasSelection(true);
