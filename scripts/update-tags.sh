@@ -45,8 +45,8 @@ for tag in $ALL_TAGS; do
   if [[ "$tag" == *-* ]]; then
     continue
   fi
-  # Skip MIN_VERSION itself and anything that sorts before/equal to it
-  if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | tail -1)" = "$tag" ] && [ "$tag" != "$MIN_VERSION" ]; then
+  # Include MIN_VERSION and anything that sorts after it
+  if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | tail -1)" = "$tag" ]; then
     NEW_TAGS="$NEW_TAGS $tag"
   fi
 done
@@ -54,11 +54,11 @@ done
 cd "$PROJECT_ROOT"
 
 if [ -z "$NEW_TAGS" ]; then
-  log "No versions found newer than $MIN_VERSION"
+  log "No versions found >= $MIN_VERSION"
   exit 0
 fi
 
-log "Found versions newer than $MIN_VERSION:$NEW_TAGS"
+log "Found versions >= $MIN_VERSION:$NEW_TAGS"
 
 # Process each new version
 PROCESSED=0
