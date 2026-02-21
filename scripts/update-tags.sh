@@ -35,15 +35,18 @@ cd "$TEMP_DIR/repo"
 # Get all version tags (v*.*.*)
 ALL_TAGS=$(git tag -l "v*.*.*" | sort -V)
 
-# Filter to get only versions newer than MIN_VERSION
+# Filter to get only stable versions strictly newer than MIN_VERSION
+# sort -V places pre-release tags (e.g., v1.6.0-beta.2) after the stable
+# release (v1.6.0), so we skip any tag containing a hyphen (pre-release)
+# and only include tags that sort after MIN_VERSION.
 NEW_TAGS=""
-FOUND_MIN=false
 for tag in $ALL_TAGS; do
-  if [ "$tag" = "$MIN_VERSION" ]; then
-    FOUND_MIN=true
+  # Skip pre-release versions (alpha, beta, rc, etc.)
+  if [[ "$tag" == *-* ]]; then
     continue
   fi
-  if [ "$FOUND_MIN" = true ]; then
+  # Skip MIN_VERSION itself and anything that sorts before/equal to it
+  if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | tail -1)" = "$tag" ] && [ "$tag" != "$MIN_VERSION" ]; then
     NEW_TAGS="$NEW_TAGS $tag"
   fi
 done
