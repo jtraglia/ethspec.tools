@@ -379,17 +379,11 @@ export function displayTestSource(testSource) {
   const icon = document.createElement('i');
   icon.className = 'fas fa-chevron-down file-toggle-icon';
 
-  const iconLabel = document.createElement('i');
-  iconLabel.className = 'fas fa-code';
-  iconLabel.style.color = 'var(--link-color)';
-  iconLabel.style.fontSize = '0.85rem';
-
   const label = document.createElement('span');
   label.className = 'file-name';
   label.textContent = filePath;
 
   header.appendChild(icon);
-  header.appendChild(iconLabel);
   header.appendChild(label);
 
   // Content (expanded by default)
