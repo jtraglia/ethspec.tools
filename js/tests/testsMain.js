@@ -390,14 +390,19 @@ export function handleDeepLink(path) {
     testPathParts = parts;
   }
 
-  navigateToTest(testPathParts);
+  // Use timeout to ensure tree is fully rendered before navigating
+  setTimeout(() => {
+    navigateToTest(testPathParts);
+  }, 100);
 }
 
 /**
  * Navigate to a specific test by path parts
  * Supports optional file targeting: preset/fork/testType/testSuite/config/testCase/filename:viewmode
  */
-function navigateToTest(pathParts) {
+function navigateToTest(pathParts, retryCount = 0) {
+  const maxRetries = 10;
+
   if (pathParts.length < 6) return;
 
   const [preset, fork, testType, testSuite, config, ...testCaseParts] = pathParts;
@@ -457,8 +462,13 @@ function navigateToTest(pathParts) {
           label.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
-      break;
+      return;
     }
+  }
+
+  // Node not found yet, retry after a delay (tree may still be rendering)
+  if (retryCount < maxRetries) {
+    setTimeout(() => navigateToTest(pathParts, retryCount + 1), 100);
   }
 }
 
