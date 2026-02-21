@@ -379,7 +379,8 @@ function createForkDiffToggle(item, container) {
 function stripComments(code) {
   return code.split('\n')
     .filter(line => !(/^\s*#/.test(line)))
-    .join('\n');
+    .join('\n')
+    .trimEnd() + '\n';
 }
 
 /**
