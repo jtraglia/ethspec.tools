@@ -38,7 +38,7 @@ function getBaseName(name) {
 /**
  * Parse a variable value array into type and value
  */
-function parseVariableValue(value) {
+export function parseVariableValue(value) {
   if (Array.isArray(value)) {
     return {
       type: value[0] || '',
@@ -87,7 +87,7 @@ function getBestVersionValue(categoryData) {
 /**
  * Collect all items from the data, tracking only forks where the value changed
  */
-function collectItems(data, forks) {
+export function collectItems(data, forks) {
   const mainnetData = data.mainnet;
   const minimalData = data.minimal;
   if (!mainnetData && !minimalData) return {};

@@ -8,6 +8,7 @@ import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurre
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
 import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
 import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
+import { exitCompare } from './specCompare.js';
 
 // Application state
 const state = {
@@ -27,7 +28,7 @@ const state = {
 /**
  * Extract forks from data
  */
-function extractForks(data) {
+export function extractForks(data) {
   const networkData = data.mainnet || data.minimal;
   if (!networkData) return [];
 
@@ -156,8 +157,12 @@ window.selectItem = onItemSelect;
 /**
  * Get current version
  */
-function getCurrentVersion() {
+export function getCurrentVersion() {
   return state.currentVersion;
+}
+
+export function getAvailableVersions() {
+  return state.availableVersions;
 }
 
 // Set the getCurrentVersion function in specViewer
@@ -284,6 +289,8 @@ export function populateVersionDropdown() {
  */
 async function onVersionChange(version) {
   if (version === state.currentVersion) return;
+
+  exitCompare(true);
 
   const itemNameToFind = state.currentItemName;
 

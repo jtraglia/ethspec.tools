@@ -4,6 +4,7 @@
 
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
+import { isCompareActive, updateCompareItem, createCompareControls, setOnExitCallback } from './specCompare.js';
 
 // Current item being displayed
 let currentItem = null;
@@ -17,6 +18,11 @@ let getCurrentVersionFn = null;
 export function setGetCurrentVersion(fn) {
   getCurrentVersionFn = fn;
 }
+
+// Register callback for when comparison mode exits (re-render normal view)
+setOnExitCallback((item, data) => {
+  displaySpec(item, data);
+});
 
 /**
  * Create a "Used by" section showing items that reference this item
@@ -78,8 +84,20 @@ export function displaySpec(item, data) {
   const itemId = `specs/${version}/${item.category}-${item.name}`;
   history.replaceState(null, '', `#${itemId}`);
 
+  // Add compare controls to spec header
+  const header = document.querySelector('.spec-header');
+  const existingControls = header.querySelector('.compare-controls');
+  if (existingControls) existingControls.remove();
+  header.appendChild(createCompareControls(item, data));
+
   // Clear existing content
   content.innerHTML = '';
+
+  // If comparison mode is active, render comparison instead of normal view
+  if (isCompareActive()) {
+    updateCompareItem(item, data);
+    return;
+  }
 
   // Check if this is a variable type (constants, presets, config) or code type
   const isVariable = ['constant_vars', 'preset_vars', 'config_vars'].includes(item.category);
