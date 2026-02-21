@@ -26,6 +26,6 @@ http:
     beacon-api:
       loadBalancer:
         servers:
-          - url: "http://192.168.4.137:5052"
+          - url: "http://localhost:5052"
         responseForwarding:
           flushInterval: "-1"
