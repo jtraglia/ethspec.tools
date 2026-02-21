@@ -31,6 +31,8 @@ services:
     expose:
       - "80"
     restart: unless-stopped
+    security_opt:
+      - label:disable
     volumes:
       - ./pyspec:/usr/share/nginx/html/pyspec:ro
       - ./data:/usr/share/nginx/html/data:ro
