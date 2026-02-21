@@ -1288,9 +1288,15 @@ pre[class*="language-"] {
   color: var(--text-color);
   font-size: 1.25rem;
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 6px;
   transition: background-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-toggle:hover {
@@ -1343,8 +1349,6 @@ pre[class*="language-"] {
   /* Show hamburger menu */
   .menu-toggle {
     display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   /* Header: compact layout */

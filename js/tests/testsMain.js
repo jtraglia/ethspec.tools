@@ -176,25 +176,28 @@ async function loadVersionData(version) {
 }
 
 /**
- * Look up test function source code
+ * Look up test function source code.
+ *
+ * Test generators strip the "test_" prefix from function names, so the data
+ * has e.g. "already_exited_long_ago" while the Python function is
+ * "test_already_exited_long_ago". Directory names also differ between source
+ * and output (e.g. "block_processing" vs "operations").
  */
 function lookupTestSource(fork, testType, testSuite, testCase) {
   const sources = state.testSources;
   if (!sources || !sources.functions) return null;
 
-  // Strategy 1: Exact path match (fork/testType/testSuite/testCase)
-  const exactKey = `${fork}/${testType}/${testSuite}/${testCase}`;
-  if (sources.functions[exactKey]) {
-    return { source: sources.functions[exactKey], key: exactKey };
-  }
+  // The Python function name usually has a "test_" prefix
+  const funcName = testCase.startsWith('test_') ? testCase : `test_${testCase}`;
 
-  // Strategy 2: Use by_name index to find candidates, then disambiguate
-  if (sources.by_name && sources.by_name[testCase]) {
-    const candidates = sources.by_name[testCase];
+  // Helper to search by_name candidates
+  function searchByName(name) {
+    const candidates = sources.by_name && sources.by_name[name];
+    if (!candidates) return null;
 
-    // Prefer candidate matching fork and testSuite
+    // Prefer candidate matching fork and testSuite in module name
     for (const key of candidates) {
-      if (key.startsWith(fork + '/') && key.includes('/' + testSuite + '/')) {
+      if (key.startsWith(fork + '/') && key.includes(testSuite)) {
         return { source: sources.functions[key], key };
       }
     }
@@ -206,20 +209,27 @@ function lookupTestSource(fork, testType, testSuite, testCase) {
       }
     }
 
-    // Prefer candidate where module name contains testSuite
-    for (const key of candidates) {
-      const parts = key.split('/');
-      const moduleName = parts[parts.length - 2]; // second to last
-      if (moduleName && moduleName.includes(testSuite)) {
-        return { source: sources.functions[key], key };
-      }
-    }
-
-    // Fall back to first candidate
+    // Fall back to single candidate
     if (candidates.length === 1) {
       return { source: sources.functions[candidates[0]], key: candidates[0] };
     }
+
+    return null;
   }
+
+  // Strategy 1: Exact path match
+  const exactKey = `${fork}/${testType}/${testSuite}/${funcName}`;
+  if (sources.functions[exactKey]) {
+    return { source: sources.functions[exactKey], key: exactKey };
+  }
+
+  // Strategy 2: by_name with test_ prefix
+  const result = searchByName(funcName);
+  if (result) return result;
+
+  // Strategy 3: by_name without test_ prefix (some generators keep it)
+  const result2 = searchByName(testCase);
+  if (result2) return result2;
 
   return null;
 }
