@@ -250,6 +250,9 @@ async function onTestSelect(testPath) {
     // Look up test function source
     const testSource = lookupTestSource(fork, testType, testSuite, testCase);
 
+    // Update URL for sharing
+    history.replaceState(null, '', `#tests/${state.currentVersion}/${fullPath}`);
+
     // Check cache
     const cacheKey = `${state.currentVersion}:${fullPath}`;
     let loadedFiles = state.loadedSuites.get(cacheKey);
