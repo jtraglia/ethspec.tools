@@ -4,13 +4,19 @@
 
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
-import { isCompareActive, updateCompareItem, createCompareControls, setOnExitCallback } from './specCompare.js';
+import { isCompareActive, updateCompareItem, createCompareControls, setOnExitCallback, renderUnifiedDiff, renderSideBySideDiff, renderAllAdded } from './specCompare.js';
 
 // Current item being displayed
 let currentItem = null;
 
 // Reference to getCurrentVersion function (set by specsMain)
 let getCurrentVersionFn = null;
+
+// Fork diff view state (persists across navigation)
+const forkDiffState = {
+  mode: 'code',           // 'code' or 'diff'
+  diffViewMode: 'unified' // 'unified' or 'side-by-side'
+};
 
 /**
  * Set the getCurrentVersion function reference
@@ -104,14 +110,13 @@ export function displaySpec(item, data) {
 
   if (isVariable) {
     displayVariable(item, content);
+    // Add "Used by" section
+    const usedBySection = createUsedBySection(item.name);
+    if (usedBySection) {
+      content.appendChild(usedBySection);
+    }
   } else {
-    displayCode(item, content);
-  }
-
-  // Add "Used by" section
-  const usedBySection = createUsedBySection(item.name);
-  if (usedBySection) {
-    content.appendChild(usedBySection);
+    renderCodeView(item, content);
   }
 }
 
@@ -267,6 +272,235 @@ function displayVariable(item, container) {
   tableWrapper.appendChild(table);
   box.appendChild(tableWrapper);
   container.appendChild(box);
+}
+
+/**
+ * Orchestrator for code item rendering.
+ * Clears the container, adds the Code/Diff toggle bar (if applicable),
+ * dispatches to displayCode or displayForkDiffs, then appends "Used by".
+ */
+function renderCodeView(item, container) {
+  container.innerHTML = '';
+
+  const hasMultipleForks = item.forks.length >= 2;
+
+  // Add toggle bar for multi-fork items
+  const toggleBar = createForkDiffToggle(item, container);
+  if (toggleBar) {
+    container.appendChild(toggleBar);
+  }
+
+  // Render based on mode
+  if (hasMultipleForks && forkDiffState.mode === 'diff') {
+    displayForkDiffs(item, container);
+  } else {
+    displayCode(item, container);
+  }
+
+  // Add "Used by" section
+  const usedBySection = createUsedBySection(item.name);
+  if (usedBySection) {
+    container.appendChild(usedBySection);
+  }
+}
+
+/**
+ * Create the Code/Diff toggle bar for multi-fork items.
+ * Returns null for single-fork items.
+ */
+function createForkDiffToggle(item, container) {
+  if (item.forks.length < 2) return null;
+
+  const bar = document.createElement('div');
+  bar.className = 'fork-diff-toggle-bar';
+
+  // Code / Diff toggle
+  const modeToggle = document.createElement('div');
+  modeToggle.className = 'diff-view-toggle';
+
+  const codeBtn = document.createElement('button');
+  codeBtn.className = 'diff-view-btn' + (forkDiffState.mode === 'code' ? ' active' : '');
+  codeBtn.textContent = 'Code';
+  codeBtn.addEventListener('click', () => {
+    if (forkDiffState.mode === 'code') return;
+    forkDiffState.mode = 'code';
+    renderCodeView(item, container);
+  });
+
+  const diffBtn = document.createElement('button');
+  diffBtn.className = 'diff-view-btn' + (forkDiffState.mode === 'diff' ? ' active' : '');
+  diffBtn.textContent = 'Diff';
+  diffBtn.addEventListener('click', () => {
+    if (forkDiffState.mode === 'diff') return;
+    forkDiffState.mode = 'diff';
+    renderCodeView(item, container);
+  });
+
+  modeToggle.appendChild(codeBtn);
+  modeToggle.appendChild(diffBtn);
+  bar.appendChild(modeToggle);
+
+  // Unified / Side-by-side sub-toggle (only in diff mode)
+  if (forkDiffState.mode === 'diff') {
+    const viewToggle = document.createElement('div');
+    viewToggle.className = 'diff-view-toggle';
+
+    const unifiedBtn = document.createElement('button');
+    unifiedBtn.className = 'diff-view-btn' + (forkDiffState.diffViewMode === 'unified' ? ' active' : '');
+    unifiedBtn.textContent = 'Unified';
+    unifiedBtn.addEventListener('click', () => {
+      if (forkDiffState.diffViewMode === 'unified') return;
+      forkDiffState.diffViewMode = 'unified';
+      renderCodeView(item, container);
+    });
+
+    const sideBySideBtn = document.createElement('button');
+    sideBySideBtn.className = 'diff-view-btn' + (forkDiffState.diffViewMode === 'side-by-side' ? ' active' : '');
+    sideBySideBtn.textContent = 'Side-by-side';
+    sideBySideBtn.addEventListener('click', () => {
+      if (forkDiffState.diffViewMode === 'side-by-side') return;
+      forkDiffState.diffViewMode = 'side-by-side';
+      renderCodeView(item, container);
+    });
+
+    viewToggle.appendChild(unifiedBtn);
+    viewToggle.appendChild(sideBySideBtn);
+    bar.appendChild(viewToggle);
+  }
+
+  return bar;
+}
+
+/**
+ * Display fork diffs for a code item.
+ * Iterates forks newest-first. For the oldest fork, renders all lines as added.
+ * For each subsequent fork, computes diff from the previous fork's code.
+ */
+function displayForkDiffs(item, container) {
+  const forksReversed = [...item.forks].reverse();
+
+  forksReversed.forEach((fork, index) => {
+    const value = item.values[fork];
+    const isFirst = index === 0; // newest fork, expanded by default
+    const isOldest = index === forksReversed.length - 1;
+
+    // Find the previous fork (one step older) code for diffing
+    const olderForkIndex = item.forks.indexOf(fork) - 1;
+    const olderFork = olderForkIndex >= 0 ? item.forks[olderForkIndex] : null;
+    const olderCode = olderFork ? item.values[olderFork] : null;
+
+    const box = document.createElement('div');
+    box.className = 'file-box fork-code-block diff-fork-block';
+    box.dataset.fork = fork;
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'file-header diff-fork-header';
+
+    const icon = document.createElement('i');
+    icon.className = (isFirst ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'file-name-badge';
+    nameEl.textContent = getForkDisplayName(fork);
+    nameEl.style.backgroundColor = getForkColor(fork);
+
+    header.appendChild(icon);
+    header.appendChild(nameEl);
+
+    // Diff stats
+    if (isOldest) {
+      // Oldest fork: all lines are "added"
+      const lines = String(value).split('\n');
+      const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+      const stats = document.createElement('span');
+      stats.className = 'diff-stats';
+      stats.innerHTML = `<span class="diff-stat-added">+${lineCount}</span>`;
+      header.appendChild(stats);
+    } else {
+      // Compute diff stats
+      const changes = Diff.diffLines(String(olderCode), String(value));
+      let addedLines = 0;
+      let removedLines = 0;
+      changes.forEach(part => {
+        const lines = part.count || part.value.split('\n').length - (part.value.endsWith('\n') ? 1 : 0);
+        if (part.added) addedLines += lines;
+        else if (part.removed) removedLines += lines;
+      });
+
+      if (addedLines > 0 || removedLines > 0) {
+        const stats = document.createElement('span');
+        stats.className = 'diff-stats';
+        stats.innerHTML = `<span class="diff-stat-added">+${addedLines}</span> <span class="diff-stat-removed">-${removedLines}</span>`;
+        header.appendChild(stats);
+      } else {
+        const noChange = document.createElement('span');
+        noChange.className = 'diff-no-change-badge';
+        noChange.textContent = 'No changes';
+        header.appendChild(noChange);
+      }
+    }
+
+    // Spacer + copy link button
+    const spacer = document.createElement('div');
+    spacer.style.flex = '1';
+    header.appendChild(spacer);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-link-icon';
+    copyBtn.innerHTML = '<i class="fas fa-link"></i>';
+    copyBtn.title = 'Copy link to this item';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const version = getCurrentVersionFn ? getCurrentVersionFn() : 'nightly';
+      const itemId = `specs/${version}/${item.category}-${item.name}-${fork.toLowerCase()}`;
+      const url = new URL(window.location.href);
+      url.hash = itemId;
+      navigator.clipboard.writeText(url.href).then(() => {
+        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+        setTimeout(() => {
+          copyBtn.innerHTML = '<i class="fas fa-link"></i>';
+        }, 1500);
+      });
+    });
+    header.appendChild(copyBtn);
+
+    // Content
+    const contentEl = document.createElement('div');
+    contentEl.className = 'file-content';
+    if (!isFirst) {
+      contentEl.classList.add('collapsed');
+    }
+
+    const diffContainer = document.createElement('div');
+    diffContainer.className = 'diff-container';
+
+    if (isOldest) {
+      // Oldest fork: show all lines as added
+      renderAllAdded(diffContainer, String(value));
+    } else {
+      const oldStr = String(olderCode);
+      const newStr = String(value);
+      if (forkDiffState.diffViewMode === 'unified') {
+        renderUnifiedDiff(diffContainer, oldStr, newStr);
+      } else {
+        renderSideBySideDiff(diffContainer, oldStr, newStr);
+      }
+    }
+
+    contentEl.appendChild(diffContainer);
+
+    // Toggle functionality
+    header.addEventListener('click', () => {
+      const isCollapsed = contentEl.classList.contains('collapsed');
+      contentEl.classList.toggle('collapsed');
+      icon.className = (isCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
+    });
+
+    box.appendChild(header);
+    box.appendChild(contentEl);
+    container.appendChild(box);
+  });
 }
 
 /**

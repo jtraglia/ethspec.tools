@@ -542,7 +542,7 @@ function renderCodeComparison(container, oldItem, newItem, oldVer, newVer, oldFo
 /**
  * Render unified diff view with line numbers
  */
-function renderUnifiedDiff(container, oldCode, newCode) {
+export function renderUnifiedDiff(container, oldCode, newCode) {
   const changes = Diff.diffLines(oldCode, newCode);
   const table = document.createElement('table');
   table.className = 'diff-unified';
@@ -598,7 +598,7 @@ function renderUnifiedDiff(container, oldCode, newCode) {
 /**
  * Render side-by-side diff view with synchronized scrolling
  */
-function renderSideBySideDiff(container, oldCode, newCode) {
+export function renderSideBySideDiff(container, oldCode, newCode) {
   const wrapper = document.createElement('div');
   wrapper.className = 'diff-side-by-side';
 
@@ -691,7 +691,7 @@ function renderSideBySideDiff(container, oldCode, newCode) {
 /**
  * Render all lines as added (item new in current version)
  */
-function renderAllAdded(container, code) {
+export function renderAllAdded(container, code) {
   const table = document.createElement('table');
   table.className = 'diff-unified';
   const lines = code.split('\n');
@@ -715,7 +715,7 @@ function renderAllAdded(container, code) {
 /**
  * Render all lines as removed (item removed in current version)
  */
-function renderAllRemoved(container, code) {
+export function renderAllRemoved(container, code) {
   const table = document.createElement('table');
   table.className = 'diff-unified';
   const lines = code.split('\n');
