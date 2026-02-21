@@ -372,6 +372,17 @@ function createForkDiffToggle(item, container) {
 }
 
 /**
+ * Strip comment-only lines from Python code.
+ * Removes lines where the only non-whitespace content is a # comment,
+ * to produce cleaner diffs between forks.
+ */
+function stripComments(code) {
+  return code.split('\n')
+    .filter(line => !(/^\s*#/.test(line)))
+    .join('\n');
+}
+
+/**
  * Display fork diffs for a code item.
  * Iterates forks newest-first. For the oldest fork, renders all lines as added.
  * For each subsequent fork, computes diff from the previous fork's code.
@@ -408,10 +419,14 @@ function displayForkDiffs(item, container) {
     header.appendChild(icon);
     header.appendChild(nameEl);
 
+    // Strip comments for cleaner diffs
+    const strippedValue = stripComments(String(value));
+    const strippedOlderCode = olderCode != null ? stripComments(String(olderCode)) : null;
+
     // Diff stats
     if (isOldest) {
       // Oldest fork: all lines are "added"
-      const lines = String(value).split('\n');
+      const lines = strippedValue.split('\n');
       const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
       const stats = document.createElement('span');
       stats.className = 'diff-stats';
@@ -419,7 +434,7 @@ function displayForkDiffs(item, container) {
       header.appendChild(stats);
     } else {
       // Compute diff stats
-      const changes = Diff.diffLines(String(olderCode), String(value));
+      const changes = Diff.diffLines(strippedOlderCode, strippedValue);
       let addedLines = 0;
       let removedLines = 0;
       changes.forEach(part => {
@@ -477,14 +492,12 @@ function displayForkDiffs(item, container) {
 
     if (isOldest) {
       // Oldest fork: show all lines as added
-      renderAllAdded(diffContainer, String(value));
+      renderAllAdded(diffContainer, strippedValue);
     } else {
-      const oldStr = String(olderCode);
-      const newStr = String(value);
       if (forkDiffState.diffViewMode === 'unified') {
-        renderUnifiedDiff(diffContainer, oldStr, newStr);
+        renderUnifiedDiff(diffContainer, strippedOlderCode, strippedValue);
       } else {
-        renderSideBySideDiff(diffContainer, oldStr, newStr);
+        renderSideBySideDiff(diffContainer, strippedOlderCode, strippedValue);
       }
     }
 
