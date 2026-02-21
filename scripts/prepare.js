@@ -70,6 +70,27 @@ function downloadFile(url, dest) {
 }
 
 /**
+ * Download a file with retries
+ */
+async function downloadFileWithRetry(url, dest, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await downloadFile(url, dest);
+      return;
+    } catch (err) {
+      if (attempt < maxRetries) {
+        const delay = attempt * 5;
+        console.log(`\n  Download failed (attempt ${attempt}/${maxRetries}): ${err.message}`);
+        console.log(`  Retrying in ${delay}s...`);
+        await new Promise(r => setTimeout(r, delay * 1000));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
+/**
  * Download and extract test archives for a version
  */
 async function downloadAndExtractTests(version, extractDir) {
@@ -86,7 +107,7 @@ async function downloadAndExtractTests(version, extractDir) {
     console.log(`Downloading ${filename}...`);
 
     try {
-      await downloadFile(url, dest);
+      await downloadFileWithRetry(url, dest);
       console.log(`Extracting ${filename}...`);
 
       // Extract to extract directory (tar contains tests/ directory)
