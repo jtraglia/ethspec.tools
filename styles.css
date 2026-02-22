@@ -1334,6 +1334,11 @@ pre.test-code-box {
 .diff-line-content {
   padding: 0 0.75rem !important;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.diff-line-content::-webkit-scrollbar {
+  display: none;
 }
 
 /* Diff line colors */
