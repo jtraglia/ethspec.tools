@@ -564,7 +564,7 @@ export function renderUnifiedDiff(container, oldCode, newCode) {
           <td class="diff-line-number"></td>
           <td class="diff-line-number">${newLineNum}</td>
           <td class="diff-line-prefix">+</td>
-          <td class="diff-line-content">${escapeHtml(line)}</td>
+          <td class="diff-line-content">${highlightLine(line)}</td>
         `;
         newLineNum++;
       } else if (part.removed) {
@@ -573,7 +573,7 @@ export function renderUnifiedDiff(container, oldCode, newCode) {
           <td class="diff-line-number">${oldLineNum}</td>
           <td class="diff-line-number"></td>
           <td class="diff-line-prefix">-</td>
-          <td class="diff-line-content">${escapeHtml(line)}</td>
+          <td class="diff-line-content">${highlightLine(line)}</td>
         `;
         oldLineNum++;
       } else {
@@ -582,7 +582,7 @@ export function renderUnifiedDiff(container, oldCode, newCode) {
           <td class="diff-line-number">${oldLineNum}</td>
           <td class="diff-line-number">${newLineNum}</td>
           <td class="diff-line-prefix"> </td>
-          <td class="diff-line-content">${escapeHtml(line)}</td>
+          <td class="diff-line-content">${highlightLine(line)}</td>
         `;
         oldLineNum++;
         newLineNum++;
@@ -704,7 +704,7 @@ export function renderAllAdded(container, code) {
       <td class="diff-line-number"></td>
       <td class="diff-line-number">${i + 1}</td>
       <td class="diff-line-prefix">+</td>
-      <td class="diff-line-content">${escapeHtml(line)}</td>
+      <td class="diff-line-content">${highlightLine(line)}</td>
     `;
     table.appendChild(row);
   });
@@ -728,7 +728,7 @@ export function renderAllRemoved(container, code) {
       <td class="diff-line-number">${i + 1}</td>
       <td class="diff-line-number"></td>
       <td class="diff-line-prefix">-</td>
-      <td class="diff-line-content">${escapeHtml(line)}</td>
+      <td class="diff-line-content">${highlightLine(line)}</td>
     `;
     table.appendChild(row);
   });
@@ -855,4 +855,14 @@ export function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Syntax-highlight a line of Python code using Prism
+ */
+function highlightLine(line) {
+  if (typeof Prism !== 'undefined' && Prism.languages.python) {
+    return Prism.highlight(line, Prism.languages.python, 'python');
+  }
+  return escapeHtml(line);
 }
