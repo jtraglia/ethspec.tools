@@ -194,6 +194,7 @@ function computeVersionChanges() {
     Object.values(baseCat).forEach(item => {
       if (!currentCat[item.name]) {
         removedItems.push({ name: item.name, category });
+        changes.set(item.name, { type: 'removed', category, changedForks: [...item.forks] });
       }
     });
   });
@@ -329,16 +330,26 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
 
       const labelEl = document.createElement('div');
       labelEl.className = 'tree-label changelog-removed-label';
+      labelEl.style.cursor = 'pointer';
 
       const iconEl = document.createElement('span');
       iconEl.className = 'tree-icon';
       iconEl.innerHTML = '<i class="fas fa-cube"></i>';
       labelEl.appendChild(iconEl);
 
-      const code = document.createElement('code');
-      code.className = 'tree-item-name';
-      code.textContent = name;
-      labelEl.appendChild(code);
+      const codeEl = document.createElement('code');
+      codeEl.className = 'tree-item-name';
+      codeEl.textContent = name;
+      labelEl.appendChild(codeEl);
+
+      // Make clickable — select as a synthetic item so the viewer shows old code
+      labelEl.addEventListener('click', () => {
+        if (window.selectItem) {
+          const baseItem = changelogState.baseItems?.[category]?.[name];
+          const forks = baseItem ? baseItem.forks : [];
+          window.selectItem({ name, category, forks, element: labelEl });
+        }
+      });
 
       node.appendChild(labelEl);
       childrenContainer.appendChild(node);
@@ -401,8 +412,16 @@ function renderVersionDiff(item, container) {
   if (!currentItem) {
     const msg = document.createElement('div');
     msg.className = 'diff-item-missing';
-    msg.innerHTML = `<i class="fas fa-minus-circle"></i> Item <code>${escapeHtml(item.name)}</code> was removed in ${escapeHtml(currentVersion)}.`;
+    msg.style.marginBottom = '1rem';
+    msg.innerHTML = `<i class="fas fa-minus-circle"></i> This item was removed in ${escapeHtml(currentVersion)}.`;
     container.appendChild(msg);
+
+    // Show the old code as all-removed diffs
+    if (isVariable) {
+      renderVariableVersionDiff(null, baseItem, container, baseVersion, currentVersion);
+    } else {
+      renderCodeVersionDiff(null, baseItem, container);
+    }
     return;
   }
 
