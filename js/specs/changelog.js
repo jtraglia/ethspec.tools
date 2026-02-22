@@ -501,7 +501,7 @@ function renderCodeVersionDiff(currentItem, baseItem, container) {
     const currentStr = currentCode != null ? stripComments(String(currentCode)) : null;
     const baseStr = baseCode != null ? stripComments(String(baseCode)) : null;
 
-    renderForkDiffBlock(container, fork, baseStr, currentStr, index === 0);
+    renderForkDiffBlock(container, fork, baseStr, currentStr, true);
   });
 }
 
