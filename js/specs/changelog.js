@@ -172,8 +172,8 @@ function computeForkChanges(data, forks, selectedFork) {
 
     Object.values(categoryItems).forEach(item => {
       if (item.forks.includes(selectedFork)) {
-        // If the selected fork is the only fork, the item was introduced here
-        const type = item.forks.length === 1 && item.forks[0] === selectedFork ? 'added' : 'modified';
+        // If the selected fork is the item's first (introducing) fork, it's "added"
+        const type = item.forks[0] === selectedFork ? 'added' : 'modified';
         changes.set(item.name, { type, category });
       }
     });
