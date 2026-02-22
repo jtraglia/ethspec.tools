@@ -1288,6 +1288,11 @@ pre.test-code-box {
 /* Diff container */
 .diff-container {
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.diff-container::-webkit-scrollbar {
+  display: none;
 }
 
 /* Unified diff table */
