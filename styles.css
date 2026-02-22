@@ -1301,12 +1301,10 @@ pre.test-code-box {
 
 /* Unified diff table */
 .diff-unified {
-  width: 100%;
   border-collapse: collapse;
   font-family: "Monaco", "Courier New", monospace;
   font-size: 0.85rem;
   line-height: 1.5;
-  table-layout: fixed;
 }
 
 .diff-unified td {
@@ -1337,12 +1335,6 @@ pre.test-code-box {
 
 .diff-line-content {
   padding: 0 0.75rem !important;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.diff-line-content::-webkit-scrollbar {
-  display: none;
 }
 
 /* Diff line colors */
@@ -1952,16 +1944,9 @@ pre[class*="language-"] {
     display: none !important;
   }
 
-  /* Version changelog button: icon only, match height of version select */
-  .version-changelog-text {
-    display: none;
-  }
-
+  /* Hide changelog button on mobile */
   .version-changelog-btn {
-    padding: 0;
-    width: 34px;
-    height: 34px;
-    justify-content: center;
+    display: none !important;
   }
 
   /* Hide dark mode label icons on mobile to save space */
