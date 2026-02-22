@@ -6,7 +6,7 @@
 import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
 import { escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
-import { CATEGORY_ORDER } from './constants.js';
+import { CATEGORY_ORDER, getCategoryDisplayName } from './constants.js';
 
 // Changelog state
 const changelogState = {
@@ -395,13 +395,76 @@ export function applyChangelogToTree(typeFilter, searchTerm) {
       if (icon) icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
     }
   });
+
+  // Show removed items section at the bottom of the tree
+  renderRemovedItemsInTree(container, typeFilter, searchTerm);
 }
 
 /**
- * Remove all changelog badges from the tree
+ * Render removed items section at the bottom of the tree
+ */
+function renderRemovedItemsInTree(container, typeFilter, searchTerm) {
+  // Remove any existing section
+  const existing = container.querySelector('.changelog-removed-section');
+  if (existing) existing.remove();
+
+  const removedItems = changelogState.removedItems;
+  if (!removedItems || removedItems.length === 0) return;
+
+  // Filter removed items by type and search
+  const filtered = removedItems.filter(item => {
+    if (typeFilter && item.category !== typeFilter) return false;
+    if (searchTerm && !item.name.toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) return;
+
+  // Group by category
+  const byCategory = {};
+  filtered.forEach(item => {
+    if (!byCategory[item.category]) byCategory[item.category] = [];
+    byCategory[item.category].push(item.name);
+  });
+
+  const section = document.createElement('div');
+  section.className = 'changelog-removed-section';
+
+  const title = document.createElement('div');
+  title.className = 'changelog-removed-title';
+  title.innerHTML = `<i class="fas fa-minus-circle"></i> Removed (${filtered.length})`;
+  section.appendChild(title);
+
+  CATEGORY_ORDER.forEach(category => {
+    const items = byCategory[category];
+    if (!items) return;
+
+    const catLabel = document.createElement('div');
+    catLabel.className = 'changelog-removed-category';
+    catLabel.textContent = getCategoryDisplayName(category);
+    section.appendChild(catLabel);
+
+    const list = document.createElement('div');
+    list.className = 'changelog-removed-list';
+    items.sort().forEach(name => {
+      const item = document.createElement('span');
+      item.className = 'changelog-removed-item';
+      item.textContent = name;
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  });
+
+  container.appendChild(section);
+}
+
+/**
+ * Remove all changelog badges and removed section from the tree
  */
 function clearTreeBadges() {
   document.querySelectorAll('#specsTree .changelog-badge').forEach(badge => badge.remove());
+  const removed = document.querySelector('#specsTree .changelog-removed-section');
+  if (removed) removed.remove();
 }
 
 /**
