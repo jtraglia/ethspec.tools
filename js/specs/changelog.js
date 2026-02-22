@@ -5,8 +5,8 @@
 
 import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
-import { escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
-import { CATEGORY_ORDER } from './constants.js';
+import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, renderAllRemoved, exitCompare, isCompareActive } from './specCompare.js';
+import { CATEGORY_ORDER, getForkDisplayName, getForkColor } from './constants.js';
 
 // Changelog state
 const changelogState = {
@@ -17,7 +17,7 @@ const changelogState = {
   baseItems: null,
   currentItems: null,
   currentForks: [],
-  changes: null,           // Map<name, { type: 'added'|'modified', category }>
+  changes: null,           // Map<name, { type: 'added'|'modified', category, changedForks }>
   removedItems: []         // Array of { name, category }
 };
 
@@ -89,7 +89,7 @@ export function enterChangelog() {
   changelogState.currentItems = collectItems(data, forks);
   changelogState.currentForks = forks;
 
-  // Add body class to hide fork filter buttons
+  // Add body class to hide fork letter badges on tree items
   document.body.classList.add('changelog-active');
 
   // Mark header button as active
@@ -111,8 +111,6 @@ export function enterChangelog() {
   if (prevVersion) {
     fetchAndComputeVersionChanges(prevVersion);
   }
-
-  renderChangelogBar();
 }
 
 /**
@@ -137,11 +135,6 @@ export function exitChangelog() {
   // Remove body class
   document.body.classList.remove('changelog-active');
 
-  // Hide changelog bar
-  const bar = document.getElementById('changelogBar');
-  bar.classList.add('hidden');
-  bar.innerHTML = '';
-
   // Deactivate header button
   const headerBtn = document.getElementById('versionChangelogBtn');
   if (headerBtn) headerBtn.classList.remove('active');
@@ -154,13 +147,11 @@ export function exitChangelog() {
 }
 
 /**
- * Compute version changes — compare current items with base version items
+ * Compute version changes — compare current items with base version items per-fork
  */
 function computeVersionChanges() {
   const currentItems = changelogState.currentItems;
   const baseItems = changelogState.baseItems;
-  const currentForks = changelogState.currentForks;
-  const baseForks = changelogState.baseForks;
   const changes = new Map();
   const removedItems = [];
 
@@ -168,16 +159,25 @@ function computeVersionChanges() {
     const currentCat = currentItems[category] || {};
     const baseCat = baseItems[category] || {};
 
-    // Items in current but not in base → added
-    // Items in both but different effective latest → modified
+    // Items in current but not in base → added (all forks are new)
+    // Items in both → check per-fork for differences
     Object.values(currentCat).forEach(item => {
-      if (!baseCat[item.name]) {
-        changes.set(item.name, { type: 'added', category });
+      const baseEquiv = baseCat[item.name];
+      if (!baseEquiv) {
+        changes.set(item.name, { type: 'added', category, changedForks: [...item.forks] });
       } else {
-        const currentValue = getEffectiveLatestValue(item, currentForks);
-        const baseValue = getEffectiveLatestValue(baseCat[item.name], baseForks);
-        if (JSON.stringify(currentValue) !== JSON.stringify(baseValue)) {
-          changes.set(item.name, { type: 'modified', category });
+        // Compare per-fork
+        const allForks = new Set([...item.forks, ...baseEquiv.forks]);
+        const changedForks = [];
+        for (const fork of allForks) {
+          const currentVal = item.values[fork];
+          const baseVal = baseEquiv.values[fork];
+          if (JSON.stringify(currentVal) !== JSON.stringify(baseVal)) {
+            changedForks.push(fork);
+          }
+        }
+        if (changedForks.length > 0) {
+          changes.set(item.name, { type: 'modified', category, changedForks });
         }
       }
     });
@@ -196,30 +196,9 @@ function computeVersionChanges() {
 }
 
 /**
- * Get effective latest value for an item by walking forks in reverse
- */
-function getEffectiveLatestValue(item, forks) {
-  for (let i = forks.length - 1; i >= 0; i--) {
-    const fork = forks[i];
-    if (item.values[fork] !== undefined) {
-      return item.values[fork];
-    }
-  }
-  return null;
-}
-
-/**
  * Fetch base version data and compute version changes
  */
 async function fetchAndComputeVersionChanges(version) {
-  const bar = document.getElementById('changelogBar');
-
-  // Show loading in the summary area
-  const existingSummary = bar.querySelector('.changelog-summary');
-  if (existingSummary) {
-    existingSummary.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-  }
-
   try {
     let baseData = dataCache.get(version);
     if (!baseData) {
@@ -234,71 +213,17 @@ async function fetchAndComputeVersionChanges(version) {
     changelogState.baseItems = collectItems(baseData, changelogState.baseForks);
 
     computeVersionChanges();
-    renderChangelogBar();
     applyFiltersFn();
   } catch (err) {
     console.error('Error loading version for changelog:', err);
-    const summary = bar.querySelector('.changelog-summary');
-    if (summary) {
-      summary.textContent = 'Error loading version';
-    }
   }
-}
-
-/**
- * Render the changelog bar UI
- */
-function renderChangelogBar() {
-  const bar = document.getElementById('changelogBar');
-  bar.classList.remove('hidden');
-  bar.innerHTML = '';
-
-  // Change summary
-  const summary = document.createElement('span');
-  summary.className = 'changelog-summary';
-
-  if (changelogState.changes) {
-    let addedCount = 0;
-    let modifiedCount = 0;
-    changelogState.changes.forEach(({ type }) => {
-      if (type === 'added') addedCount++;
-      else modifiedCount++;
-    });
-
-    const parts = [];
-    if (addedCount > 0) parts.push(`<span class="changelog-summary-added">${addedCount} added</span>`);
-    if (modifiedCount > 0) parts.push(`<span class="changelog-summary-modified">${modifiedCount} modified</span>`);
-    if (changelogState.removedItems.length > 0) {
-      parts.push(`<span class="changelog-summary-removed">${changelogState.removedItems.length} removed</span>`);
-    }
-    if (parts.length === 0) {
-      summary.textContent = 'No changes';
-    } else {
-      summary.innerHTML = parts.join(', ');
-    }
-  } else {
-    summary.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-  }
-
-  bar.appendChild(summary);
-
-  // Close button
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'changelog-close-btn';
-  closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-  closeBtn.title = 'Exit What Changed mode';
-  closeBtn.addEventListener('click', () => {
-    exitChangelog();
-  });
-
-  bar.appendChild(closeBtn);
 }
 
 /**
  * Apply changelog filtering to the tree
  * Called from specsMain.applyFilters() when changelog is active
  */
-export function applyChangelogToTree(typeFilter, searchTerm) {
+export function applyChangelogToTree(forkFilter, typeFilter, searchTerm) {
   const changes = changelogState.changes;
   if (!changes) return;
 
@@ -326,10 +251,12 @@ export function applyChangelogToTree(typeFilter, searchTerm) {
       const nameLower = name.toLowerCase();
       const change = changes.get(name);
 
+      // Fork filter — only show items where the selected fork changed
+      const matchesFork = !forkFilter || (change && change.changedForks.includes(forkFilter));
       // Search filter
       const matchesSearch = !searchTerm || nameLower.includes(searchTerm);
 
-      if (change && matchesSearch) {
+      if (change && matchesFork && matchesSearch) {
         itemNode.classList.remove('tree-filtered');
         visibleItemCount++;
 
@@ -358,16 +285,19 @@ export function applyChangelogToTree(typeFilter, searchTerm) {
     }
   });
 
-  // Show removed items section at the bottom of the tree
-  renderRemovedItemsInTree(container, typeFilter, searchTerm);
+  // Show removed items in the tree
+  renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm);
 }
 
 /**
  * Inject removed items into the tree as proper tree nodes
  */
-function renderRemovedItemsInTree(container, typeFilter, searchTerm) {
+function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm) {
   const removedItems = changelogState.removedItems;
   if (!removedItems || removedItems.length === 0) return;
+
+  // Skip removed items when fork filter is active (we don't track per-fork info for removed items)
+  if (forkFilter) return;
 
   // Group by category, filtering as we go
   const byCategory = {};
@@ -440,6 +370,16 @@ export function renderChangelogItem(item, container) {
 }
 
 /**
+ * Strip comment-only lines from Python code for cleaner diffs
+ */
+function stripComments(code) {
+  return code.split('\n')
+    .filter(line => !(/^\s*#/.test(line)))
+    .join('\n')
+    .trimEnd() + '\n';
+}
+
+/**
  * Render version diff for a changelog item
  */
 function renderVersionDiff(item, container) {
@@ -465,10 +405,9 @@ function renderVersionDiff(item, container) {
     <i class="fas fa-arrow-right compare-arrow"></i>
     <span class="compare-version-label compare-new">${escapeHtml(currentVersion)}</span>
   `;
-
   container.appendChild(headerBar);
 
-  // Handle missing items
+  // Handle entirely missing items
   if (!baseItem) {
     const msg = document.createElement('div');
     msg.className = 'diff-item-missing';
@@ -485,100 +424,196 @@ function renderVersionDiff(item, container) {
   }
 
   if (isVariable) {
-    // Variable comparison
-    const currentValue = getEffectiveLatestValue(currentItem, changelogState.currentForks);
-    const baseValue = baseItem ? getEffectiveLatestValue(baseItem, changelogState.baseForks) : null;
-
-    if (!baseItem) {
-      renderSingleVariableTable(container, currentValue);
-    } else {
-      renderVariableComparisonTable(container, baseValue, currentValue, baseVersion, currentVersion);
-    }
+    renderVariableVersionDiff(currentItem, baseItem, container, baseVersion, currentVersion);
   } else {
-    // Code comparison - get effective latest values
-    const currentCode = getEffectiveLatestValue(currentItem, changelogState.currentForks);
-    const baseCode = baseItem ? getEffectiveLatestValue(baseItem, changelogState.baseForks) : null;
-
-    const diffContainer = document.createElement('div');
-    diffContainer.className = 'diff-container';
-
-    const currentStr = currentCode != null ? String(currentCode) : '';
-    const baseStr = baseCode != null ? String(baseCode) : '';
-
-    if (!baseItem || baseCode === null) {
-      renderAllAdded(diffContainer, currentStr);
-    } else if (currentStr === baseStr) {
-      diffContainer.innerHTML = '<div class="diff-no-changes">No changes in effective code</div>';
-    } else {
-      renderUnifiedDiff(diffContainer, baseStr, currentStr);
-    }
-
-    const box = document.createElement('div');
-    box.className = 'file-box';
-    box.appendChild(diffContainer);
-    container.appendChild(box);
+    renderCodeVersionDiff(currentItem, baseItem, container);
   }
 }
 
 /**
- * Render a single variable value table (for newly added items)
+ * Render per-fork code diffs between versions
  */
-function renderSingleVariableTable(container, value) {
+function renderCodeVersionDiff(currentItem, baseItem, container) {
+  // Gather all forks from both versions that have differences
+  const currentForks = currentItem ? currentItem.forks : [];
+  const baseForks = baseItem ? baseItem.forks : [];
+  const allForks = [...new Set([...currentForks, ...baseForks])];
+
+  // Sort by known fork order, newest first
+  allForks.sort((a, b) => {
+    const ai = FORK_ORDER.indexOf(a);
+    const bi = FORK_ORDER.indexOf(b);
+    return (bi >= 0 ? bi : 999) - (ai >= 0 ? ai : 999);
+  });
+
+  // Filter to only forks that actually changed between versions
+  const changedForks = allForks.filter(fork => {
+    const currentVal = currentItem?.values[fork];
+    const baseVal = baseItem?.values[fork];
+    return JSON.stringify(currentVal) !== JSON.stringify(baseVal);
+  });
+
+  if (changedForks.length === 0) {
+    const msg = document.createElement('div');
+    msg.className = 'diff-no-changes';
+    msg.textContent = 'No changes detected';
+    container.appendChild(msg);
+    return;
+  }
+
+  // For entirely new items, show all code as added (per fork)
+  if (!baseItem) {
+    changedForks.forEach((fork, index) => {
+      const code = currentItem.values[fork];
+      if (code == null) return;
+      const codeStr = stripComments(String(code));
+      renderForkDiffBlock(container, fork, null, codeStr, index === 0);
+    });
+    return;
+  }
+
+  // Show per-fork diffs
+  changedForks.forEach((fork, index) => {
+    const currentCode = currentItem?.values[fork];
+    const baseCode = baseItem?.values[fork];
+
+    const currentStr = currentCode != null ? stripComments(String(currentCode)) : null;
+    const baseStr = baseCode != null ? stripComments(String(baseCode)) : null;
+
+    renderForkDiffBlock(container, fork, baseStr, currentStr, index === 0);
+  });
+}
+
+/**
+ * Render a single collapsible fork diff block (mirrors specViewer.displayForkDiffs style)
+ */
+function renderForkDiffBlock(container, fork, baseStr, currentStr, expanded) {
   const box = document.createElement('div');
-  box.className = 'fork-box';
+  box.className = 'file-box fork-code-block diff-fork-block';
+  box.dataset.fork = fork;
 
-  const tableWrapper = document.createElement('div');
-  tableWrapper.style.padding = '1rem';
+  // Header
+  const header = document.createElement('div');
+  header.className = 'file-header diff-fork-header';
 
-  const table = document.createElement('table');
-  table.className = 'variable-table';
+  const icon = document.createElement('i');
+  icon.className = (expanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
 
-  // Parse value
-  let mainnetParsed, minimalParsed;
-  if (value && typeof value === 'object' && ('mainnet' in value || 'minimal' in value)) {
-    mainnetParsed = parseVarValue(value.mainnet);
-    minimalParsed = parseVarValue(value.minimal);
-  } else {
-    mainnetParsed = parseVarValue(value);
-    minimalParsed = mainnetParsed;
+  const nameEl = document.createElement('span');
+  nameEl.className = 'file-name-badge';
+  nameEl.textContent = getForkDisplayName(fork);
+  nameEl.style.backgroundColor = getForkColor(fork);
+
+  header.appendChild(icon);
+  header.appendChild(nameEl);
+
+  // Diff stats
+  if (!baseStr && currentStr) {
+    // Entirely new fork
+    const lines = currentStr.split('\n');
+    const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+    const stats = document.createElement('span');
+    stats.className = 'diff-stats';
+    stats.innerHTML = `<span class="diff-stat-added">+${lineCount}</span>`;
+    header.appendChild(stats);
+  } else if (baseStr && !currentStr) {
+    // Removed fork
+    const lines = baseStr.split('\n');
+    const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+    const stats = document.createElement('span');
+    stats.className = 'diff-stats';
+    stats.innerHTML = `<span class="diff-stat-removed">-${lineCount}</span>`;
+    header.appendChild(stats);
+  } else if (baseStr && currentStr) {
+    // Modified fork — compute diff stats
+    const changes = Diff.diffLines(baseStr, currentStr);
+    let addedLines = 0;
+    let removedLines = 0;
+    changes.forEach(part => {
+      const lines = part.count || part.value.split('\n').length - (part.value.endsWith('\n') ? 1 : 0);
+      if (part.added) addedLines += lines;
+      else if (part.removed) removedLines += lines;
+    });
+
+    if (addedLines > 0 || removedLines > 0) {
+      const stats = document.createElement('span');
+      stats.className = 'diff-stats';
+      stats.innerHTML = `<span class="diff-stat-added">+${addedLines}</span> <span class="diff-stat-removed">-${removedLines}</span>`;
+      header.appendChild(stats);
+    } else {
+      const noChange = document.createElement('span');
+      noChange.className = 'diff-no-change-badge';
+      noChange.textContent = 'No changes';
+      header.appendChild(noChange);
+    }
   }
 
-  const hasDiff = String(mainnetParsed.value) !== String(minimalParsed.value);
+  // Spacer
+  const spacer = document.createElement('div');
+  spacer.style.flex = '1';
+  header.appendChild(spacer);
 
-  const thead = document.createElement('thead');
-  if (hasDiff) {
-    thead.innerHTML = '<tr><th>Type</th><th>Mainnet</th><th>Minimal</th></tr>';
-  } else {
-    thead.innerHTML = '<tr><th>Type</th><th>Value</th></tr>';
-  }
-  table.appendChild(thead);
+  // Content
+  const contentEl = document.createElement('div');
+  contentEl.className = 'file-content';
+  if (!expanded) contentEl.classList.add('collapsed');
 
-  const tbody = document.createElement('tbody');
-  const row = document.createElement('tr');
-  const displayType = mainnetParsed.type || minimalParsed.type;
-  if (hasDiff) {
-    row.innerHTML = `
-      <td><code>${escapeHtml(displayType || 'N/A')}</code></td>
-      <td><code>${escapeHtml(String(mainnetParsed.value))}</code></td>
-      <td><code>${escapeHtml(String(minimalParsed.value))}</code></td>
-    `;
-  } else {
-    row.innerHTML = `
-      <td><code>${escapeHtml(displayType || 'N/A')}</code></td>
-      <td><code>${escapeHtml(String(mainnetParsed.value))}</code></td>
-    `;
+  const diffContainer = document.createElement('div');
+  diffContainer.className = 'diff-container';
+
+  if (!baseStr && currentStr) {
+    renderAllAdded(diffContainer, currentStr);
+  } else if (baseStr && !currentStr) {
+    renderAllRemoved(diffContainer, baseStr);
+  } else if (baseStr && currentStr) {
+    renderUnifiedDiff(diffContainer, baseStr, currentStr);
   }
-  tbody.appendChild(row);
-  table.appendChild(tbody);
-  tableWrapper.appendChild(table);
-  box.appendChild(tableWrapper);
+
+  contentEl.appendChild(diffContainer);
+
+  // Toggle
+  header.addEventListener('click', () => {
+    const isCollapsed = contentEl.classList.contains('collapsed');
+    contentEl.classList.toggle('collapsed');
+    icon.className = (isCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
+  });
+
+  box.appendChild(header);
+  box.appendChild(contentEl);
   container.appendChild(box);
 }
 
 /**
- * Render a variable comparison table (old vs new)
+ * Render per-fork variable comparison between versions
  */
-function renderVariableComparisonTable(container, oldValue, newValue, oldLabel, newLabel) {
+function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion, currentVersion) {
+  // Get all forks that have differences between versions
+  const currentForks = currentItem ? currentItem.forks : [];
+  const baseForks = baseItem ? baseItem.forks : [];
+  const allForks = [...new Set([...currentForks, ...baseForks])];
+
+  // Sort by known fork order, newest first
+  allForks.sort((a, b) => {
+    const ai = FORK_ORDER.indexOf(a);
+    const bi = FORK_ORDER.indexOf(b);
+    return (bi >= 0 ? bi : 999) - (ai >= 0 ? ai : 999);
+  });
+
+  // Filter to forks that changed
+  const changedForks = allForks.filter(fork => {
+    const currentVal = currentItem?.values[fork];
+    const baseVal = baseItem?.values[fork];
+    return JSON.stringify(currentVal) !== JSON.stringify(baseVal);
+  });
+
+  if (changedForks.length === 0) {
+    const msg = document.createElement('div');
+    msg.className = 'diff-no-changes';
+    msg.textContent = 'No changes detected';
+    container.appendChild(msg);
+    return;
+  }
+
   const box = document.createElement('div');
   box.className = 'fork-box';
 
@@ -588,41 +623,44 @@ function renderVariableComparisonTable(container, oldValue, newValue, oldLabel, 
   const table = document.createElement('table');
   table.className = 'compare-variable-table';
 
-  let oldMainnet, newMainnet;
-  if (oldValue && typeof oldValue === 'object' && ('mainnet' in oldValue || 'minimal' in oldValue)) {
-    oldMainnet = parseVarValue(oldValue.mainnet);
-  } else {
-    oldMainnet = parseVarValue(oldValue);
-  }
-  if (newValue && typeof newValue === 'object' && ('mainnet' in newValue || 'minimal' in newValue)) {
-    newMainnet = parseVarValue(newValue.mainnet);
-  } else {
-    newMainnet = parseVarValue(newValue);
-  }
-
   const thead = document.createElement('thead');
   thead.innerHTML = `
     <tr>
+      <th>Fork</th>
       <th>Type</th>
-      <th class="compare-old">${escapeHtml(oldLabel)}</th>
-      <th class="compare-new">${escapeHtml(newLabel)}</th>
+      <th class="compare-old">${escapeHtml(baseVersion)}</th>
+      <th class="compare-new">${escapeHtml(currentVersion)}</th>
     </tr>
   `;
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
-  const displayType = newMainnet.type || oldMainnet.type;
-  const oldStr = String(oldMainnet.value);
-  const newStr = String(newMainnet.value);
-  const changed = oldStr !== newStr;
 
-  const row = document.createElement('tr');
-  row.innerHTML = `
-    <td><code>${escapeHtml(displayType || 'N/A')}</code></td>
-    <td class="${changed ? 'cell-changed cell-old' : ''}"><code>${escapeHtml(oldStr)}</code></td>
-    <td class="${changed ? 'cell-changed cell-new' : ''}"><code>${escapeHtml(newStr)}</code></td>
-  `;
-  tbody.appendChild(row);
+  changedForks.forEach(fork => {
+    const currentVal = currentItem?.values[fork];
+    const baseVal = baseItem?.values[fork];
+
+    const currentParsed = parseVarValue(currentVal);
+    const baseParsed = parseVarValue(baseVal);
+
+    const displayType = currentParsed.type || baseParsed.type;
+    const oldStr = baseParsed.value != null ? String(baseParsed.value) : '-';
+    const newStr = currentParsed.value != null ? String(currentParsed.value) : '-';
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
+          ${getForkDisplayName(fork)}
+        </span>
+      </td>
+      <td><code>${escapeHtml(displayType || 'N/A')}</code></td>
+      <td class="cell-changed cell-old"><code>${escapeHtml(oldStr)}</code></td>
+      <td class="cell-changed cell-new"><code>${escapeHtml(newStr)}</code></td>
+    `;
+    tbody.appendChild(row);
+  });
+
   table.appendChild(tbody);
   tableWrapper.appendChild(table);
   box.appendChild(tableWrapper);
@@ -630,9 +668,17 @@ function renderVariableComparisonTable(container, oldValue, newValue, oldLabel, 
 }
 
 /**
- * Parse a variable value (array format or raw)
+ * Parse a variable value — handles both { mainnet, minimal } objects and [type, value] arrays
  */
 function parseVarValue(value) {
+  if (value == null) return { type: '', value: null };
+
+  // Handle { mainnet, minimal } format — use mainnet as primary
+  if (typeof value === 'object' && !Array.isArray(value) && ('mainnet' in value || 'minimal' in value)) {
+    const primary = value.mainnet !== undefined ? value.mainnet : value.minimal;
+    return parseVarValue(primary);
+  }
+
   if (Array.isArray(value)) {
     return { type: value[0] || '', value: value[1] !== undefined ? value[1] : '' };
   }

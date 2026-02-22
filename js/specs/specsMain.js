@@ -108,7 +108,7 @@ function buildTypeFilters() {
  */
 function applyFilters() {
   if (isChangelogActive()) {
-    applyChangelogToTree(state.activeTypeFilter, state.searchTerm);
+    applyChangelogToTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
   } else {
     filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
   }
