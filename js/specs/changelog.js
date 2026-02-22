@@ -492,19 +492,15 @@ function renderForkDiffBlock(container, fork, baseStr, currentStr, expanded) {
   // Diff stats
   if (!baseStr && currentStr) {
     // Entirely new fork
-    const lines = currentStr.split('\n');
-    const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
     const stats = document.createElement('span');
     stats.className = 'diff-stats';
-    stats.innerHTML = `<span class="diff-stat-added">+${lineCount}</span>`;
+    stats.innerHTML = `<span class="diff-stat-added">added</span>`;
     header.appendChild(stats);
   } else if (baseStr && !currentStr) {
     // Removed fork
-    const lines = baseStr.split('\n');
-    const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
     const stats = document.createElement('span');
     stats.className = 'diff-stats';
-    stats.innerHTML = `<span class="diff-stat-removed">-${lineCount}</span>`;
+    stats.innerHTML = `<span class="diff-stat-removed">removed</span>`;
     header.appendChild(stats);
   } else if (baseStr && currentStr) {
     // Modified fork — compute diff stats

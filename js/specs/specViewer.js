@@ -423,12 +423,10 @@ function displayForkDiffs(item, container) {
 
     // Diff stats
     if (isOldest) {
-      // Oldest fork: all lines are "added"
-      const lines = strippedValue.split('\n');
-      const lineCount = lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+      // Oldest fork: introduced here
       const stats = document.createElement('span');
       stats.className = 'diff-stats';
-      stats.innerHTML = `<span class="diff-stat-added">+${lineCount}</span>`;
+      stats.innerHTML = `<span class="diff-stat-added">introduced</span>`;
       header.appendChild(stats);
     } else {
       // Compute diff stats
