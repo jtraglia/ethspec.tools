@@ -666,19 +666,28 @@ input:checked + .toggle-slider:before {
   color: var(--text-color);
 }
 
-.spec-source-link {
-  padding: 0 1rem 0.5rem;
-  font-size: 0.75rem;
-  font-family: "Monaco", "Courier New", monospace;
-}
-
-.spec-source-link a {
+/* Source link in fork headers */
+.source-link {
   color: var(--link-color);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
-.spec-source-link a:hover {
+.source-link:hover {
   text-decoration: underline;
+}
+
+.source-link code {
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.7rem;
+  background-color: var(--hover-bg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+/* Source link in variable table rows */
+.variable-table .source-link {
+  margin-left: 0.5rem;
 }
 
 .spec-content {

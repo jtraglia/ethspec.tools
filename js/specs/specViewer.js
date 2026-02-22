@@ -72,19 +72,16 @@ function createUsedBySection(itemName) {
 }
 
 /**
- * Get the GitHub source location for a spec item.
+ * Get the GitHub source location for a spec item at a specific fork.
  * Returns { url, displayText } or null if unavailable.
  */
-function getItemSourceLocation(item, info) {
+function getItemSourceLocation(itemName, fork, info) {
   if (!info || !info.sourceMap || !info.sourceMap.items) return null;
 
-  const itemEntry = info.sourceMap.items[item.name];
+  const itemEntry = info.sourceMap.items[itemName];
   if (!itemEntry) return null;
 
-  // Use the latest fork (last in item.forks)
-  const latestFork = item.forks[item.forks.length - 1];
-  const forkKey = latestFork.toLowerCase();
-
+  const forkKey = fork.toLowerCase();
   const loc = itemEntry[forkKey];
   if (!loc) return null;
 
@@ -111,6 +108,26 @@ function getItemSourceLocation(item, info) {
 }
 
 /**
+ * Create a source link DOM element for a specific fork of an item.
+ * Returns null if source info is unavailable.
+ */
+function createSourceLinkElement(itemName, fork) {
+  if (!getSourceInfoFn) return null;
+  const info = getSourceInfoFn();
+  const sourceData = getItemSourceLocation(itemName, fork, info);
+  if (!sourceData) return null;
+
+  const link = document.createElement('a');
+  link.href = sourceData.url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.className = 'source-link';
+  link.innerHTML = `<code>${escapeHtml(sourceData.displayText)}</code>`;
+  link.addEventListener('click', (e) => e.stopPropagation());
+  return link;
+}
+
+/**
  * Display a specification item
  */
 export function displaySpec(item, data) {
@@ -129,26 +146,6 @@ export function displaySpec(item, data) {
     <span>${getForkDisplayName(item.forks[0])}</span> /
     <span>${item.name}</span>
   `;
-
-  // Add GitHub source link
-  const sourceLink = document.getElementById('specSourceLink');
-  if (sourceLink) {
-    if (getSourceInfoFn) {
-      const info = getSourceInfoFn();
-      const sourceData = getItemSourceLocation(item, info);
-      if (sourceData) {
-        const { url, displayText } = sourceData;
-        sourceLink.innerHTML = `<a href="${url}" target="_blank" rel="noopener">${escapeHtml(displayText)}</a>`;
-        sourceLink.classList.remove('hidden');
-      } else {
-        sourceLink.innerHTML = '';
-        sourceLink.classList.add('hidden');
-      }
-    } else {
-      sourceLink.innerHTML = '';
-      sourceLink.classList.add('hidden');
-    }
-  }
 
   // Update URL hash for direct linking (include version)
   const version = getCurrentVersionFn ? getCurrentVersionFn() : 'nightly';
@@ -327,6 +324,13 @@ function displayVariable(item, container) {
         <td>${typeCell}</td>
         <td><code>${escapeHtml(String(mainnetParsed.value))}</code></td>
       `;
+    }
+
+    // Add source link to fork cell
+    const sourceLinkEl = createSourceLinkElement(item.name, fork);
+    if (sourceLinkEl) {
+      const forkCell = row.querySelector('td:first-child');
+      forkCell.appendChild(sourceLinkEl);
     }
 
     tbody.appendChild(row);
@@ -521,10 +525,13 @@ function displayForkDiffs(item, container) {
       }
     }
 
-    // Spacer + copy link button
+    // Spacer + source link + copy link button
     const spacer = document.createElement('div');
     spacer.style.flex = '1';
     header.appendChild(spacer);
+
+    const sourceLinkEl = createSourceLinkElement(item.name, fork);
+    if (sourceLinkEl) header.appendChild(sourceLinkEl);
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-link-icon';
@@ -640,6 +647,8 @@ function displayCode(item, container) {
     header.appendChild(icon);
     header.appendChild(nameEl);
     header.appendChild(spacer);
+    const sourceLinkEl = createSourceLinkElement(item.name, fork);
+    if (sourceLinkEl) header.appendChild(sourceLinkEl);
     header.appendChild(copyBtn);
 
     // Content
@@ -769,12 +778,6 @@ export function clearSpec() {
   document.getElementById('specTitle').textContent = '';
   document.getElementById('specBreadcrumb').innerHTML = '';
   document.getElementById('specContent').innerHTML = '';
-
-  const sourceLink = document.getElementById('specSourceLink');
-  if (sourceLink) {
-    sourceLink.innerHTML = '';
-    sourceLink.classList.add('hidden');
-  }
 
   document.getElementById('specViewer').classList.add('hidden');
   document.getElementById('welcome').classList.remove('hidden');
