@@ -13,6 +13,9 @@ let currentItem = null;
 // Reference to getCurrentVersion function (set by specsMain)
 let getCurrentVersionFn = null;
 
+// Reference to getSourceInfo function (set by specsMain)
+let getSourceInfoFn = null;
+
 // Fork diff view state (persists across navigation)
 const forkDiffState = {
   mode: 'code',          // 'code' or 'diff'
@@ -24,6 +27,13 @@ const forkDiffState = {
  */
 export function setGetCurrentVersion(fn) {
   getCurrentVersionFn = fn;
+}
+
+/**
+ * Set the getSourceInfo function reference
+ */
+export function setGetSourceInfo(fn) {
+  getSourceInfoFn = fn;
 }
 
 /**
@@ -62,6 +72,45 @@ function createUsedBySection(itemName) {
 }
 
 /**
+ * Get the GitHub source location for a spec item.
+ * Returns { url, displayText } or null if unavailable.
+ */
+function getItemSourceLocation(item, info) {
+  if (!info || !info.sourceMap || !info.sourceMap.items) return null;
+
+  const itemEntry = info.sourceMap.items[item.name];
+  if (!itemEntry) return null;
+
+  // Use the latest fork (last in item.forks)
+  const latestFork = item.forks[item.forks.length - 1];
+  const forkKey = latestFork.toLowerCase();
+
+  const loc = itemEntry[forkKey];
+  if (!loc) return null;
+
+  // Determine the git ref for the URL
+  let ref;
+  if (info.version === 'nightly') {
+    if (!info.metadata || !info.metadata.commit) return null;
+    ref = info.metadata.commit;
+  } else {
+    ref = info.version;
+  }
+
+  const lineFragment = loc.start === loc.end
+    ? `#L${loc.start}`
+    : `#L${loc.start}-L${loc.end}`;
+
+  const url = `https://github.com/ethereum/consensus-specs/blob/${ref}/${loc.file}${lineFragment}`;
+
+  const displayText = loc.start === loc.end
+    ? `${loc.file}#L${loc.start}`
+    : `${loc.file}#L${loc.start}-L${loc.end}`;
+
+  return { url, displayText };
+}
+
+/**
  * Display a specification item
  */
 export function displaySpec(item, data) {
@@ -80,6 +129,26 @@ export function displaySpec(item, data) {
     <span>${getForkDisplayName(item.forks[0])}</span> /
     <span>${item.name}</span>
   `;
+
+  // Add GitHub source link
+  const sourceLink = document.getElementById('specSourceLink');
+  if (sourceLink) {
+    if (getSourceInfoFn) {
+      const info = getSourceInfoFn();
+      const sourceData = getItemSourceLocation(item, info);
+      if (sourceData) {
+        const { url, displayText } = sourceData;
+        sourceLink.innerHTML = `<a href="${url}" target="_blank" rel="noopener">${escapeHtml(displayText)}</a>`;
+        sourceLink.classList.remove('hidden');
+      } else {
+        sourceLink.innerHTML = '';
+        sourceLink.classList.add('hidden');
+      }
+    } else {
+      sourceLink.innerHTML = '';
+      sourceLink.classList.add('hidden');
+    }
+  }
 
   // Update URL hash for direct linking (include version)
   const version = getCurrentVersionFn ? getCurrentVersionFn() : 'nightly';
@@ -700,6 +769,12 @@ export function clearSpec() {
   document.getElementById('specTitle').textContent = '';
   document.getElementById('specBreadcrumb').innerHTML = '';
   document.getElementById('specContent').innerHTML = '';
+
+  const sourceLink = document.getElementById('specSourceLink');
+  if (sourceLink) {
+    sourceLink.innerHTML = '';
+    sourceLink.classList.add('hidden');
+  }
 
   document.getElementById('specViewer').classList.add('hidden');
   document.getElementById('welcome').classList.remove('hidden');

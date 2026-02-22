@@ -4,7 +4,7 @@
  */
 
 import { buildTree, filterTree, setOnItemSelectCallback } from './tree.js';
-import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurrentVersion } from './specViewer.js';
+import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurrentVersion, setGetSourceInfo } from './specViewer.js';
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
 import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
 import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
@@ -22,7 +22,9 @@ const state = {
   searchTerm: '',
   currentVersion: 'nightly',
   availableVersions: ['nightly'],
-  initialLoadComplete: false
+  initialLoadComplete: false,
+  sourceMap: null,
+  metadata: null
 };
 
 /**
@@ -177,8 +179,16 @@ export function getAvailableVersions() {
   return state.availableVersions;
 }
 
+/**
+ * Get source info for GitHub permalink
+ */
+export function getSourceInfo() {
+  return { sourceMap: state.sourceMap, metadata: state.metadata, version: state.currentVersion };
+}
+
 // Set the getCurrentVersion function in specViewer
 setGetCurrentVersion(getCurrentVersion);
+setGetSourceInfo(getSourceInfo);
 
 /**
  * Select an item by name
@@ -367,6 +377,16 @@ async function loadVersionData(version) {
 
     state.data = await response.json();
     state.forks = extractForks(state.data);
+
+    // Fetch source map and metadata (non-blocking, non-fatal)
+    const [sourceMapRes, metadataRes] = await Promise.allSettled([
+      fetch(`pyspec/${version}/source_map.json`),
+      fetch(`pyspec/${version}/metadata.json`)
+    ]);
+    state.sourceMap = sourceMapRes.status === 'fulfilled' && sourceMapRes.value.ok
+      ? await sourceMapRes.value.json() : null;
+    state.metadata = metadataRes.status === 'fulfilled' && metadataRes.value.ok
+      ? await metadataRes.value.json() : null;
 
     buildForkFilters();
     buildTypeFilters();

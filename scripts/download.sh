@@ -103,6 +103,14 @@ cp pyspec.json "$PROJECT_ROOT/pyspec/$VERSION/pyspec.json"
 echo "Extracting test function sources..."
 python3 "$PROJECT_ROOT/scripts/extract_test_sources.py" "$CLONE_DIR" "$PROJECT_ROOT/pyspec/$VERSION/test_sources.json" || echo "Warning: Failed to extract test sources (non-fatal)"
 
+# Extract source map
+echo "Extracting source map..."
+python3 "$PROJECT_ROOT/scripts/extract_source_map.py" "$CLONE_DIR" "$PROJECT_ROOT/pyspec/$VERSION/source_map.json" || echo "Warning: Failed to extract source map (non-fatal)"
+
+# Save git commit hash for GitHub links
+GIT_SHA=$(git -C "$CLONE_DIR" rev-parse HEAD)
+echo "{\"commit\": \"$GIT_SHA\", \"version\": \"$VERSION\"}" > "$PROJECT_ROOT/pyspec/$VERSION/metadata.json"
+
 # Return to root directory
 cd "$PROJECT_ROOT"
 

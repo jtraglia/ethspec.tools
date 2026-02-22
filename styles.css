@@ -666,6 +666,21 @@ input:checked + .toggle-slider:before {
   color: var(--text-color);
 }
 
+.spec-source-link {
+  padding: 0 1rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: "Monaco", "Courier New", monospace;
+}
+
+.spec-source-link a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.spec-source-link a:hover {
+  text-decoration: underline;
+}
+
 .spec-content {
   display: flex;
   flex-direction: column;

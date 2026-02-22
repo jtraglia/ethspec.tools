@@ -69,6 +69,13 @@ log "Copying pyspec.json..."
 mkdir -p "$PROJECT_ROOT/pyspec/nightly"
 cp pyspec.json "$PROJECT_ROOT/pyspec/nightly/pyspec.json"
 
+# Extract source map
+log "Extracting source map..."
+python3 "$PROJECT_ROOT/scripts/extract_source_map.py" "$TEMP_DIR/consensus-specs" "$PROJECT_ROOT/pyspec/nightly/source_map.json" || log "Warning: Failed to extract source map (non-fatal)"
+
+# Save git commit hash for GitHub links
+echo "{\"commit\": \"$LATEST_SHA\", \"version\": \"nightly\"}" > "$PROJECT_ROOT/pyspec/nightly/metadata.json"
+
 # Update SHA file
 echo "$LATEST_SHA" > "$SHA_FILE"
 
