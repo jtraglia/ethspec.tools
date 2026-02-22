@@ -542,7 +542,7 @@ function renderForkDiffBlock(container, fork, baseStr, currentStr, expanded) {
     // Entirely new fork
     const stats = document.createElement('span');
     stats.className = 'diff-stats';
-    stats.innerHTML = `<span class="diff-stat-added">added</span>`;
+    stats.innerHTML = `<span class="diff-stat-added">introduced</span>`;
     header.appendChild(stats);
   } else if (baseStr && !currentStr) {
     // Removed fork
