@@ -4,7 +4,7 @@
 
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
-import { isCompareActive, updateCompareItem, createCompareControls, setOnExitCallback, renderUnifiedDiff, renderSideBySideDiff, renderAllAdded } from './specCompare.js';
+import { renderUnifiedDiff, renderSideBySideDiff, renderAllAdded } from './specCompare.js';
 import { isChangelogActive, renderChangelogItem } from './changelog.js';
 
 // Current item being displayed
@@ -91,20 +91,13 @@ export function displaySpec(item, data) {
   const itemId = `specs/${version}/${item.category}-${item.name}`;
   history.replaceState(null, '', `#${itemId}`);
 
-  // Add compare controls to spec header
+  // Remove any leftover compare controls
   const header = document.querySelector('.spec-header');
   const existingControls = header.querySelector('.compare-controls');
   if (existingControls) existingControls.remove();
-  header.appendChild(createCompareControls(item, data));
 
   // Clear existing content
   content.innerHTML = '';
-
-  // If comparison mode is active, render comparison instead of normal view
-  if (isCompareActive()) {
-    updateCompareItem(item, data);
-    return;
-  }
 
   // If changelog mode is active, render changelog diff instead of normal view
   if (isChangelogActive()) {

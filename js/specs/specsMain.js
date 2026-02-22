@@ -8,7 +8,6 @@ import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurre
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
 import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
 import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
-import { exitCompare } from './specCompare.js';
 import { initChangelog, exitChangelog, isChangelogActive, applyChangelogToTree } from './changelog.js';
 
 // Application state
@@ -304,7 +303,6 @@ async function onVersionChange(version) {
   if (version === state.currentVersion) return;
 
   exitChangelog();
-  exitCompare(true);
 
   const itemNameToFind = state.currentItemName;
 

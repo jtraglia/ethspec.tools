@@ -5,7 +5,7 @@
 
 import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
-import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, renderAllRemoved, exitCompare, isCompareActive } from './specCompare.js';
+import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, renderAllRemoved } from './specCompare.js';
 import { CATEGORY_ORDER, getForkDisplayName, getForkColor } from './constants.js';
 
 // Changelog state
@@ -78,11 +78,6 @@ export function initChangelog(stateFn, filtersFn) {
  * Enter changelog mode
  */
 export function enterChangelog() {
-  // Exit specCompare if active
-  if (isCompareActive()) {
-    exitCompare(true);
-  }
-
   const { data, forks, version, availableVersions } = getStateFn();
 
   changelogState.active = true;
