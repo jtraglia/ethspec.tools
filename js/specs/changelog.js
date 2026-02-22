@@ -147,7 +147,29 @@ export function exitChangelog() {
 }
 
 /**
+ * Get the effective value for an item at a given fork by resolving inheritance.
+ * If the item doesn't have an explicit value at the fork, walks backwards through
+ * FORK_ORDER to find the nearest ancestor fork that does.
+ */
+function getEffectiveValueAtFork(item, targetFork) {
+  if (!item) return null;
+  if (item.values[targetFork] !== undefined) return item.values[targetFork];
+
+  const targetIndex = FORK_ORDER.indexOf(targetFork);
+  if (targetIndex < 0) return null;
+
+  for (let i = targetIndex - 1; i >= 0; i--) {
+    const fork = FORK_ORDER[i];
+    if (item.values[fork] !== undefined) {
+      return item.values[fork];
+    }
+  }
+  return null;
+}
+
+/**
  * Compute version changes — compare current items with base version items per-fork
+ * using effective (inherited) values so that dropped overrides show as proper diffs
  */
 function computeVersionChanges() {
   const currentItems = changelogState.currentItems;
@@ -160,18 +182,18 @@ function computeVersionChanges() {
     const baseCat = baseItems[category] || {};
 
     // Items in current but not in base → added (all forks are new)
-    // Items in both → check per-fork for differences
+    // Items in both → check per-fork effective values for differences
     Object.values(currentCat).forEach(item => {
       const baseEquiv = baseCat[item.name];
       if (!baseEquiv) {
         changes.set(item.name, { type: 'added', category, changedForks: [...item.forks] });
       } else {
-        // Compare per-fork
+        // Compare effective values at each fork where either version has a redefinition
         const allForks = new Set([...item.forks, ...baseEquiv.forks]);
         const changedForks = [];
         for (const fork of allForks) {
-          const currentVal = item.values[fork];
-          const baseVal = baseEquiv.values[fork];
+          const currentVal = getEffectiveValueAtFork(item, fork);
+          const baseVal = getEffectiveValueAtFork(baseEquiv, fork);
           if (JSON.stringify(currentVal) !== JSON.stringify(baseVal)) {
             changedForks.push(fork);
           }
@@ -446,10 +468,10 @@ function renderCodeVersionDiff(currentItem, baseItem, container) {
     return (bi >= 0 ? bi : 999) - (ai >= 0 ? ai : 999);
   });
 
-  // Filter to only forks that actually changed between versions
+  // Filter to only forks where effective values actually differ between versions
   const changedForks = allForks.filter(fork => {
-    const currentVal = currentItem?.values[fork];
-    const baseVal = baseItem?.values[fork];
+    const currentVal = getEffectiveValueAtFork(currentItem, fork);
+    const baseVal = getEffectiveValueAtFork(baseItem, fork);
     return JSON.stringify(currentVal) !== JSON.stringify(baseVal);
   });
 
@@ -461,21 +483,10 @@ function renderCodeVersionDiff(currentItem, baseItem, container) {
     return;
   }
 
-  // For entirely new items, show all code as added (per fork)
-  if (!baseItem) {
-    changedForks.forEach((fork, index) => {
-      const code = currentItem.values[fork];
-      if (code == null) return;
-      const codeStr = stripComments(String(code));
-      renderForkDiffBlock(container, fork, null, codeStr, index === 0);
-    });
-    return;
-  }
-
-  // Show per-fork diffs
+  // Show per-fork diffs using effective (inherited) values
   changedForks.forEach((fork, index) => {
-    const currentCode = currentItem?.values[fork];
-    const baseCode = baseItem?.values[fork];
+    const currentCode = getEffectiveValueAtFork(currentItem, fork);
+    const baseCode = getEffectiveValueAtFork(baseItem, fork);
 
     const currentStr = currentCode != null ? stripComments(String(currentCode)) : null;
     const baseStr = baseCode != null ? stripComments(String(baseCode)) : null;
@@ -599,10 +610,10 @@ function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion
     return (bi >= 0 ? bi : 999) - (ai >= 0 ? ai : 999);
   });
 
-  // Filter to forks that changed
+  // Filter to forks where effective values differ
   const changedForks = allForks.filter(fork => {
-    const currentVal = currentItem?.values[fork];
-    const baseVal = baseItem?.values[fork];
+    const currentVal = getEffectiveValueAtFork(currentItem, fork);
+    const baseVal = getEffectiveValueAtFork(baseItem, fork);
     return JSON.stringify(currentVal) !== JSON.stringify(baseVal);
   });
 
@@ -637,8 +648,8 @@ function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion
   const tbody = document.createElement('tbody');
 
   changedForks.forEach(fork => {
-    const currentVal = currentItem?.values[fork];
-    const baseVal = baseItem?.values[fork];
+    const currentVal = getEffectiveValueAtFork(currentItem, fork);
+    const baseVal = getEffectiveValueAtFork(baseItem, fork);
 
     const currentParsed = parseVarValue(currentVal);
     const baseParsed = parseVarValue(baseVal);
