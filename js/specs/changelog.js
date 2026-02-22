@@ -42,40 +42,31 @@ export function isChangelogActive() {
 }
 
 /**
- * Initialize changelog — adds "What Changed" button to the fork filters row
+ * Initialize changelog — sets up sidebar button (fork mode) and header button (version mode)
  */
 export function initChangelog(stateFn, filtersFn) {
   getStateFn = stateFn;
   applyFiltersFn = filtersFn;
 
-  // Remove any existing button
-  const existing = document.getElementById('changelogBtn');
-  if (existing) existing.remove();
-
-  // Add button to fork filters row
-  const forkFilters = document.getElementById('specsForkFilters');
-  const btn = document.createElement('button');
-  btn.id = 'changelogBtn';
-  btn.className = 'changelog-btn';
-  btn.innerHTML = '<i class="fas fa-bolt"></i> What Changed';
-
-  // Disable if this is the oldest (last in sorted order) version with no forks to compare
   const { forks, availableVersions, version } = getStateFn();
-  const sorted = [...availableVersions].sort((a, b) => {
-    if (a === 'nightly') return -1;
-    if (b === 'nightly') return 1;
-    return compareVersions(a, b);
-  });
-  const isOldestVersion = sorted[sorted.length - 1] === version;
-  const hasSingleFork = forks.length <= 1;
 
-  if (isOldestVersion && hasSingleFork) {
-    btn.disabled = true;
-    btn.classList.add('disabled');
-    btn.title = 'No changes to show for the oldest version';
+  // --- Sidebar button (fork comparison) ---
+  const existingSidebarBtn = document.getElementById('changelogBtn');
+  if (existingSidebarBtn) existingSidebarBtn.remove();
+
+  const forkFilters = document.getElementById('specsForkFilters');
+  const sidebarBtn = document.createElement('button');
+  sidebarBtn.id = 'changelogBtn';
+  sidebarBtn.className = 'changelog-btn';
+  sidebarBtn.innerHTML = '<i class="fas fa-bolt"></i> What Changed';
+
+  if (forks.length <= 1) {
+    sidebarBtn.disabled = true;
+    sidebarBtn.classList.add('disabled');
+    sidebarBtn.title = 'Only one fork available — nothing to compare';
   } else {
-    btn.addEventListener('click', () => {
-      if (changelogState.active) {
+    sidebarBtn.addEventListener('click', () => {
+      if (changelogState.active && changelogState.compareType === 'fork') {
         exitChangelog();
       } else {
         enterChangelog('fork');
@@ -83,7 +74,37 @@ export function initChangelog(stateFn, filtersFn) {
     });
   }
 
-  forkFilters.appendChild(btn);
+  forkFilters.appendChild(sidebarBtn);
+
+  // --- Header button (version comparison) ---
+  const headerBtn = document.getElementById('versionChangelogBtn');
+  if (headerBtn) {
+    const newBtn = headerBtn.cloneNode(true);
+    headerBtn.parentNode.replaceChild(newBtn, headerBtn);
+
+    const sorted = [...availableVersions].sort((a, b) => {
+      if (a === 'nightly') return -1;
+      if (b === 'nightly') return 1;
+      return compareVersions(a, b);
+    });
+    const currentIndex = sorted.indexOf(version);
+    const isOldest = currentIndex === sorted.length - 1;
+
+    if (isOldest || availableVersions.length <= 1) {
+      newBtn.disabled = true;
+      newBtn.title = 'No previous version to compare against';
+    } else {
+      newBtn.disabled = false;
+      newBtn.title = 'Show what changed from the previous version';
+      newBtn.addEventListener('click', () => {
+        if (changelogState.active && changelogState.compareType === 'version') {
+          exitChangelog();
+        } else {
+          enterChangelog('version');
+        }
+      });
+    }
+  }
 }
 
 /**
@@ -93,6 +114,13 @@ export function enterChangelog(compareType) {
   // Exit specCompare if active
   if (isCompareActive()) {
     exitCompare(true);
+  }
+
+  // Clean up any existing changelog state when switching modes
+  if (changelogState.active) {
+    clearTreeBadges();
+    changelogState.changes = null;
+    changelogState.removedItems = [];
   }
 
   const { data, forks, version, availableVersions } = getStateFn();
@@ -105,9 +133,16 @@ export function enterChangelog(compareType) {
   // Add body class to hide fork filter buttons
   document.body.classList.add('changelog-active');
 
-  // Mark the What Changed button as active
-  const btn = document.getElementById('changelogBtn');
-  if (btn) btn.classList.add('active');
+  // Update button states
+  const sidebarBtn = document.getElementById('changelogBtn');
+  const headerBtn = document.getElementById('versionChangelogBtn');
+  if (compareType === 'fork') {
+    if (sidebarBtn) sidebarBtn.classList.add('active');
+    if (headerBtn) headerBtn.classList.remove('active');
+  } else {
+    if (headerBtn) headerBtn.classList.add('active');
+    if (sidebarBtn) sidebarBtn.classList.remove('active');
+  }
 
   if (compareType === 'fork') {
     // Default to the latest fork
@@ -167,9 +202,11 @@ export function exitChangelog() {
   bar.classList.add('hidden');
   bar.innerHTML = '';
 
-  // Deactivate the What Changed button
-  const btn = document.getElementById('changelogBtn');
-  if (btn) btn.classList.remove('active');
+  // Deactivate both buttons
+  const sidebarBtn = document.getElementById('changelogBtn');
+  if (sidebarBtn) sidebarBtn.classList.remove('active');
+  const headerBtn = document.getElementById('versionChangelogBtn');
+  if (headerBtn) headerBtn.classList.remove('active');
 
   // Remove badges from tree
   clearTreeBadges();
@@ -305,61 +342,7 @@ function renderChangelogBar() {
 
   const { forks, availableVersions, version } = getStateFn();
 
-  // Comparison type toggle (By Fork / By Version)
-  const typeToggle = document.createElement('div');
-  typeToggle.className = 'changelog-type-toggle';
-
-  const forkBtn = document.createElement('button');
-  forkBtn.className = 'changelog-type-btn' + (changelogState.compareType === 'fork' ? ' active' : '');
-  forkBtn.textContent = 'By Fork';
-  forkBtn.addEventListener('click', () => {
-    if (changelogState.compareType === 'fork') return;
-    changelogState.compareType = 'fork';
-    changelogState.selectedFork = forks[forks.length - 1];
-    const { data } = getStateFn();
-    computeForkChanges(data, forks, changelogState.selectedFork);
-    renderChangelogBar();
-    applyFiltersFn();
-  });
-
-  const versionBtn = document.createElement('button');
-  versionBtn.className = 'changelog-type-btn' + (changelogState.compareType === 'version' ? ' active' : '');
-  versionBtn.textContent = 'By Version';
-
-  // Disable version mode if only one version available
-  const otherVersions = availableVersions.filter(v => v !== version);
-  if (otherVersions.length === 0) {
-    versionBtn.disabled = true;
-    versionBtn.style.opacity = '0.4';
-    versionBtn.style.cursor = 'not-allowed';
-    versionBtn.title = 'No other versions available';
-  } else {
-    versionBtn.addEventListener('click', () => {
-      if (changelogState.compareType === 'version') return;
-      changelogState.compareType = 'version';
-
-      // Find previous version
-      const sorted = [...availableVersions].sort((a, b) => {
-        if (a === 'nightly') return -1;
-        if (b === 'nightly') return 1;
-        return compareVersions(a, b);
-      });
-      const currentIndex = sorted.indexOf(version);
-      const prevVersion = currentIndex >= 0 && currentIndex < sorted.length - 1
-        ? sorted[currentIndex + 1]
-        : otherVersions[0];
-      changelogState.baseVersion = prevVersion;
-      changelogState.changes = null;
-      renderChangelogBar();
-      fetchAndComputeVersionChanges(prevVersion);
-    });
-  }
-
-  typeToggle.appendChild(forkBtn);
-  typeToggle.appendChild(versionBtn);
-  bar.appendChild(typeToggle);
-
-  // Selector dropdown
+  // Selector dropdown (depends on compareType)
   if (changelogState.compareType === 'fork') {
     const select = document.createElement('select');
     select.className = 'changelog-base-select';

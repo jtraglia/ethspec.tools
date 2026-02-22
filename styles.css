@@ -127,6 +127,39 @@ body {
   box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.15);
 }
 
+/* Version "What Changed" button (header) */
+.version-changelog-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.version-changelog-btn:hover:not(:disabled) {
+  border-color: var(--link-color);
+  background-color: var(--hover-bg);
+}
+
+.version-changelog-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.version-changelog-btn.active {
+  background-color: var(--link-color);
+  color: white;
+  border-color: var(--link-color);
+}
+
 /* Mode toggle (Specs | Tests) */
 .mode-toggle {
   display: flex;
@@ -1538,37 +1571,6 @@ pre.test-code-box {
   flex-shrink: 0;
 }
 
-.changelog-type-toggle {
-  display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.changelog-type-btn {
-  padding: 0.3rem 0.6rem;
-  border: none;
-  background-color: var(--sidebar-bg);
-  color: var(--text-color);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.changelog-type-btn:first-child {
-  border-right: 1px solid var(--border-color);
-}
-
-.changelog-type-btn:hover:not(.active) {
-  background-color: var(--hover-bg);
-}
-
-.changelog-type-btn.active {
-  background-color: var(--link-color);
-  color: white;
-}
-
 .changelog-base-select {
   padding: 0.3rem 1.8rem 0.3rem 0.5rem;
   font-size: 0.8rem;
@@ -2077,6 +2079,11 @@ pre[class*="language-"] {
   /* Hide navigation arrows on mobile */
   .navigation-box {
     display: none !important;
+  }
+
+  /* Version changelog button: icon only on mobile */
+  .version-changelog-text {
+    display: none;
   }
 
   /* Hide dark mode label icons on mobile to save space */
