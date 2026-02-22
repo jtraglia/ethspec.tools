@@ -1,30 +1,24 @@
 /**
  * Changelog ("What Changed") module
- * Shows items that changed in a specific fork or between two spec versions
+ * Shows items that changed between two spec versions
  */
 
 import { collectItems } from './tree.js';
-import { extractForks, compareVersions, getCurrentVersion, getAvailableVersions } from './specsMain.js';
-import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
-import { getForkDisplayName, getForkColor, getCategoryDisplayName, CATEGORY_ORDER } from './constants.js';
+import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
+import { escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
+import { CATEGORY_ORDER } from './constants.js';
 
 // Changelog state
 const changelogState = {
   active: false,
-  compareType: 'fork',    // 'fork' or 'version'
-  // Fork mode
-  selectedFork: null,
-  // Version mode
   baseVersion: null,
   baseData: null,
   baseForks: [],
   baseItems: null,
-  // Current data references
   currentItems: null,
   currentForks: [],
-  // Computed results
   changes: null,           // Map<name, { type: 'added'|'modified', category }>
-  removedItems: []         // Array of { name, category } (version mode only)
+  removedItems: []         // Array of { name, category }
 };
 
 // Cache fetched version data
@@ -42,135 +36,83 @@ export function isChangelogActive() {
 }
 
 /**
- * Initialize changelog — sets up sidebar button (fork mode) and header button (version mode)
+ * Initialize changelog — sets up the header "What Changed" button for version comparison
  */
 export function initChangelog(stateFn, filtersFn) {
   getStateFn = stateFn;
   applyFiltersFn = filtersFn;
 
-  const { forks, availableVersions, version } = getStateFn();
+  const { availableVersions, version } = getStateFn();
 
-  // --- Sidebar button (fork comparison) ---
-  const existingSidebarBtn = document.getElementById('changelogBtn');
-  if (existingSidebarBtn) existingSidebarBtn.remove();
+  const headerBtn = document.getElementById('versionChangelogBtn');
+  if (!headerBtn) return;
 
-  const forkFilters = document.getElementById('specsForkFilters');
-  const sidebarBtn = document.createElement('button');
-  sidebarBtn.id = 'changelogBtn';
-  sidebarBtn.className = 'changelog-btn';
-  sidebarBtn.innerHTML = '<i class="fas fa-bolt"></i> What Changed';
+  const newBtn = headerBtn.cloneNode(true);
+  headerBtn.parentNode.replaceChild(newBtn, headerBtn);
 
-  if (forks.length <= 1) {
-    sidebarBtn.disabled = true;
-    sidebarBtn.classList.add('disabled');
-    sidebarBtn.title = 'Only one fork available — nothing to compare';
+  const sorted = [...availableVersions].sort((a, b) => {
+    if (a === 'nightly') return -1;
+    if (b === 'nightly') return 1;
+    return compareVersions(a, b);
+  });
+  const currentIndex = sorted.indexOf(version);
+  const isOldest = currentIndex === sorted.length - 1;
+
+  if (isOldest || availableVersions.length <= 1) {
+    newBtn.disabled = true;
+    newBtn.title = 'No previous version to compare against';
   } else {
-    sidebarBtn.addEventListener('click', () => {
-      if (changelogState.active && changelogState.compareType === 'fork') {
+    newBtn.disabled = false;
+    newBtn.title = 'Show what changed from the previous version';
+    newBtn.addEventListener('click', () => {
+      if (changelogState.active) {
         exitChangelog();
       } else {
-        enterChangelog('fork');
+        enterChangelog();
       }
     });
-  }
-
-  forkFilters.appendChild(sidebarBtn);
-
-  // --- Header button (version comparison) ---
-  const headerBtn = document.getElementById('versionChangelogBtn');
-  if (headerBtn) {
-    const newBtn = headerBtn.cloneNode(true);
-    headerBtn.parentNode.replaceChild(newBtn, headerBtn);
-
-    const sorted = [...availableVersions].sort((a, b) => {
-      if (a === 'nightly') return -1;
-      if (b === 'nightly') return 1;
-      return compareVersions(a, b);
-    });
-    const currentIndex = sorted.indexOf(version);
-    const isOldest = currentIndex === sorted.length - 1;
-
-    if (isOldest || availableVersions.length <= 1) {
-      newBtn.disabled = true;
-      newBtn.title = 'No previous version to compare against';
-    } else {
-      newBtn.disabled = false;
-      newBtn.title = 'Show what changed from the previous version';
-      newBtn.addEventListener('click', () => {
-        if (changelogState.active && changelogState.compareType === 'version') {
-          exitChangelog();
-        } else {
-          enterChangelog('version');
-        }
-      });
-    }
   }
 }
 
 /**
  * Enter changelog mode
  */
-export function enterChangelog(compareType) {
+export function enterChangelog() {
   // Exit specCompare if active
   if (isCompareActive()) {
     exitCompare(true);
   }
 
-  // Clean up any existing changelog state when switching modes
-  if (changelogState.active) {
-    clearTreeBadges();
-    changelogState.changes = null;
-    changelogState.removedItems = [];
-  }
-
   const { data, forks, version, availableVersions } = getStateFn();
 
   changelogState.active = true;
-  changelogState.compareType = compareType;
   changelogState.currentItems = collectItems(data, forks);
   changelogState.currentForks = forks;
 
   // Add body class to hide fork filter buttons
   document.body.classList.add('changelog-active');
 
-  // Update button states
-  const sidebarBtn = document.getElementById('changelogBtn');
+  // Mark header button as active
   const headerBtn = document.getElementById('versionChangelogBtn');
-  if (compareType === 'fork') {
-    if (sidebarBtn) sidebarBtn.classList.add('active');
-    if (headerBtn) headerBtn.classList.remove('active');
-  } else {
-    if (headerBtn) headerBtn.classList.add('active');
-    if (sidebarBtn) sidebarBtn.classList.remove('active');
-  }
+  if (headerBtn) headerBtn.classList.add('active');
 
-  if (compareType === 'fork') {
-    // Default to the latest fork
-    changelogState.selectedFork = forks[forks.length - 1];
-    computeForkChanges(data, forks, changelogState.selectedFork);
-  } else {
-    // Find the previous version
-    const sorted = [...availableVersions].sort((a, b) => {
-      if (a === 'nightly') return -1;
-      if (b === 'nightly') return 1;
-      return compareVersions(a, b);
-    });
-    const currentIndex = sorted.indexOf(version);
-    const prevVersion = currentIndex >= 0 && currentIndex < sorted.length - 1
-      ? sorted[currentIndex + 1]
-      : null;
-    changelogState.baseVersion = prevVersion;
+  // Find the previous version
+  const sorted = [...availableVersions].sort((a, b) => {
+    if (a === 'nightly') return -1;
+    if (b === 'nightly') return 1;
+    return compareVersions(a, b);
+  });
+  const currentIndex = sorted.indexOf(version);
+  const prevVersion = currentIndex >= 0 && currentIndex < sorted.length - 1
+    ? sorted[currentIndex + 1]
+    : null;
+  changelogState.baseVersion = prevVersion;
 
-    if (prevVersion) {
-      fetchAndComputeVersionChanges(prevVersion);
-    }
+  if (prevVersion) {
+    fetchAndComputeVersionChanges(prevVersion);
   }
 
   renderChangelogBar();
-
-  if (changelogState.changes) {
-    applyFiltersFn();
-  }
 }
 
 /**
@@ -180,8 +122,6 @@ export function exitChangelog() {
   if (!changelogState.active) return;
 
   changelogState.active = false;
-  changelogState.compareType = 'fork';
-  changelogState.selectedFork = null;
   changelogState.baseVersion = null;
   changelogState.baseData = null;
   changelogState.baseForks = [];
@@ -202,9 +142,7 @@ export function exitChangelog() {
   bar.classList.add('hidden');
   bar.innerHTML = '';
 
-  // Deactivate both buttons
-  const sidebarBtn = document.getElementById('changelogBtn');
-  if (sidebarBtn) sidebarBtn.classList.remove('active');
+  // Deactivate header button
   const headerBtn = document.getElementById('versionChangelogBtn');
   if (headerBtn) headerBtn.classList.remove('active');
 
@@ -213,31 +151,6 @@ export function exitChangelog() {
 
   // Re-apply normal filters
   if (applyFiltersFn) applyFiltersFn();
-}
-
-/**
- * Compute fork changes — items that changed in a specific fork
- */
-function computeForkChanges(data, forks, selectedFork) {
-  const items = changelogState.currentItems;
-  const changes = new Map();
-
-  CATEGORY_ORDER.forEach(category => {
-    const categoryItems = items[category];
-    if (!categoryItems) return;
-
-    Object.values(categoryItems).forEach(item => {
-      if (item.forks.includes(selectedFork)) {
-        // If the selected fork is the item's first (introducing) fork, it's "added"
-        const type = item.forks[0] === selectedFork ? 'added' : 'modified';
-        changes.set(item.name, { type, category });
-      }
-    });
-  });
-
-  changelogState.changes = changes;
-  changelogState.removedItems = [];
-  window._changelogChanges = changes;
 }
 
 /**
@@ -340,59 +253,36 @@ function renderChangelogBar() {
   bar.classList.remove('hidden');
   bar.innerHTML = '';
 
-  const { forks, availableVersions, version } = getStateFn();
+  const { availableVersions, version } = getStateFn();
 
-  // Selector dropdown (depends on compareType)
-  if (changelogState.compareType === 'fork') {
-    const select = document.createElement('select');
-    select.className = 'changelog-base-select';
+  // Version dropdown
+  const select = document.createElement('select');
+  select.className = 'changelog-base-select';
 
-    forks.forEach(fork => {
-      const option = document.createElement('option');
-      option.value = fork;
-      option.textContent = getForkDisplayName(fork);
-      if (fork === changelogState.selectedFork) option.selected = true;
-      select.appendChild(option);
-    });
+  // Sort versions: nightly first, then semver descending
+  const sorted = [...availableVersions].sort((a, b) => {
+    if (a === 'nightly') return -1;
+    if (b === 'nightly') return 1;
+    return compareVersions(a, b);
+  });
 
-    select.addEventListener('change', () => {
-      changelogState.selectedFork = select.value;
-      const { data } = getStateFn();
-      computeForkChanges(data, forks, changelogState.selectedFork);
-      renderChangelogBar();
-      applyFiltersFn();
-    });
+  sorted.forEach(v => {
+    if (v === version) return;
+    const option = document.createElement('option');
+    option.value = v;
+    option.textContent = v;
+    if (v === changelogState.baseVersion) option.selected = true;
+    select.appendChild(option);
+  });
 
-    bar.appendChild(select);
-  } else {
-    const select = document.createElement('select');
-    select.className = 'changelog-base-select';
+  select.addEventListener('change', () => {
+    changelogState.baseVersion = select.value;
+    changelogState.changes = null;
+    renderChangelogBar();
+    fetchAndComputeVersionChanges(select.value);
+  });
 
-    // Sort versions: nightly first, then semver descending
-    const sorted = [...availableVersions].sort((a, b) => {
-      if (a === 'nightly') return -1;
-      if (b === 'nightly') return 1;
-      return compareVersions(a, b);
-    });
-
-    sorted.forEach(v => {
-      if (v === version) return;
-      const option = document.createElement('option');
-      option.value = v;
-      option.textContent = v;
-      if (v === changelogState.baseVersion) option.selected = true;
-      select.appendChild(option);
-    });
-
-    select.addEventListener('change', () => {
-      changelogState.baseVersion = select.value;
-      changelogState.changes = null;
-      renderChangelogBar();
-      fetchAndComputeVersionChanges(select.value);
-    });
-
-    bar.appendChild(select);
-  }
+  bar.appendChild(select);
 
   // Change summary
   const summary = document.createElement('span');
@@ -409,7 +299,7 @@ function renderChangelogBar() {
     const parts = [];
     if (addedCount > 0) parts.push(`<span class="changelog-summary-added">${addedCount} added</span>`);
     if (modifiedCount > 0) parts.push(`<span class="changelog-summary-modified">${modifiedCount} modified</span>`);
-    if (changelogState.compareType === 'version' && changelogState.removedItems.length > 0) {
+    if (changelogState.removedItems.length > 0) {
       parts.push(`<span class="changelog-summary-removed">${changelogState.removedItems.length} removed</span>`);
     }
     if (parts.length === 0) {
@@ -417,7 +307,7 @@ function renderChangelogBar() {
     } else {
       summary.innerHTML = parts.join(', ');
     }
-  } else if (changelogState.compareType === 'version') {
+  } else {
     summary.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
   }
 
@@ -520,118 +410,7 @@ function clearTreeBadges() {
  */
 export function renderChangelogItem(item, container) {
   container.innerHTML = '';
-
-  if (changelogState.compareType === 'fork') {
-    renderForkDiff(item, container);
-  } else {
-    renderVersionDiff(item, container);
-  }
-}
-
-/**
- * Render fork diff for a changelog item
- * Shows the diff for the selected fork vs its predecessor
- */
-function renderForkDiff(item, container) {
-  const selectedFork = changelogState.selectedFork;
-  const isVariable = ['constant_vars', 'preset_vars', 'config_vars'].includes(item.category);
-
-  if (isVariable) {
-    // For variables, show the value at the selected fork
-    renderVariableAtFork(item, container, selectedFork);
-    return;
-  }
-
-  // Find the predecessor fork's code
-  const forkIndex = item.forks.indexOf(selectedFork);
-  const olderFork = forkIndex > 0 ? item.forks[forkIndex - 1] : null;
-  const currentCode = item.values[selectedFork];
-  const olderCode = olderFork ? item.values[olderFork] : null;
-
-  if (!currentCode && !olderCode) {
-    container.innerHTML = '<div class="changelog-no-changes">No code available for this fork.</div>';
-    return;
-  }
-
-  // Header showing fork context
-  const headerBar = document.createElement('div');
-  headerBar.className = 'compare-header-bar';
-
-  if (olderFork) {
-    headerBar.innerHTML = `
-      <span class="compare-version-label compare-old">${escapeHtml(getForkDisplayName(olderFork))}</span>
-      <i class="fas fa-arrow-right compare-arrow"></i>
-      <span class="compare-version-label compare-new">${escapeHtml(getForkDisplayName(selectedFork))}</span>
-    `;
-  } else {
-    headerBar.innerHTML = `
-      <span class="compare-version-label compare-new">Introduced in ${escapeHtml(getForkDisplayName(selectedFork))}</span>
-    `;
-  }
-
-  container.appendChild(headerBar);
-
-  // Render diff
-  const diffContainer = document.createElement('div');
-  diffContainer.className = 'diff-container';
-
-  // Strip comments for cleaner diffs
-  const strippedCurrent = stripComments(String(currentCode));
-  const strippedOlder = olderCode != null ? stripComments(String(olderCode)) : null;
-
-  if (!strippedOlder) {
-    renderAllAdded(diffContainer, strippedCurrent);
-  } else {
-    renderUnifiedDiff(diffContainer, strippedOlder, strippedCurrent);
-  }
-
-  const box = document.createElement('div');
-  box.className = 'file-box';
-  box.appendChild(diffContainer);
-  container.appendChild(box);
-}
-
-/**
- * Render variable value at a specific fork (fork mode)
- */
-function renderVariableAtFork(item, container, selectedFork) {
-  const forkIndex = item.forks.indexOf(selectedFork);
-  const currentValue = item.values[selectedFork];
-
-  if (!currentValue) {
-    container.innerHTML = '<div class="changelog-no-changes">No value at this fork.</div>';
-    return;
-  }
-
-  // If this is the first fork, show as "new"
-  if (forkIndex === 0) {
-    const headerBar = document.createElement('div');
-    headerBar.className = 'compare-header-bar';
-    headerBar.innerHTML = `<span class="compare-version-label compare-new">Introduced in ${escapeHtml(getForkDisplayName(selectedFork))}</span>`;
-    container.appendChild(headerBar);
-  } else {
-    // Find the previous fork that has a value
-    const olderFork = item.forks[forkIndex - 1];
-    const olderValue = item.values[olderFork];
-
-    const headerBar = document.createElement('div');
-    headerBar.className = 'compare-header-bar';
-    headerBar.innerHTML = `
-      <span class="compare-version-label compare-old">${escapeHtml(getForkDisplayName(olderFork))}</span>
-      <i class="fas fa-arrow-right compare-arrow"></i>
-      <span class="compare-version-label compare-new">${escapeHtml(getForkDisplayName(selectedFork))}</span>
-    `;
-    container.appendChild(headerBar);
-
-    // Show comparison table
-    if (olderValue) {
-      renderVariableComparisonTable(container, olderValue, currentValue, getForkDisplayName(olderFork), getForkDisplayName(selectedFork));
-      return;
-    }
-  }
-
-  // Just show the current value
-  renderSingleVariableTable(container, currentValue, selectedFork);
+  renderVersionDiff(item, container);
 }
 
 /**
@@ -685,7 +464,7 @@ function renderVersionDiff(item, container) {
     const baseValue = baseItem ? getEffectiveLatestValue(baseItem, changelogState.baseForks) : null;
 
     if (!baseItem) {
-      renderSingleVariableTable(container, currentValue, changelogState.currentForks[changelogState.currentForks.length - 1]);
+      renderSingleVariableTable(container, currentValue);
     } else {
       renderVariableComparisonTable(container, baseValue, currentValue, baseVersion, currentVersion);
     }
@@ -716,19 +495,9 @@ function renderVersionDiff(item, container) {
 }
 
 /**
- * Strip comment-only lines from Python code for cleaner diffs
- */
-function stripComments(code) {
-  return code.split('\n')
-    .filter(line => !(/^\s*#/.test(line)))
-    .join('\n')
-    .trimEnd() + '\n';
-}
-
-/**
  * Render a single variable value table (for newly added items)
  */
-function renderSingleVariableTable(container, value, fork) {
+function renderSingleVariableTable(container, value) {
   const box = document.createElement('div');
   box.className = 'fork-box';
 

@@ -1522,41 +1522,6 @@ pre.test-code-box {
    CHANGELOG (WHAT CHANGED) STYLES
    ============================================ */
 
-/* Changelog button (sits inside fork filters row) */
-.changelog-btn {
-  margin-left: auto;
-  padding: 0.3rem 0.75rem;
-  border: 1.5px solid var(--border-color);
-  border-radius: 16px;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.changelog-btn:hover {
-  border-color: var(--link-color);
-  background-color: var(--hover-bg);
-}
-
-.changelog-btn.active {
-  background-color: var(--link-color);
-  color: white;
-  border-color: var(--link-color);
-  font-weight: 500;
-}
-
-.changelog-btn.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
 /* Changelog bar (active state) */
 .changelog-bar {
   padding: 0.4rem 1rem;
@@ -1688,8 +1653,8 @@ pre.test-code-box {
   border-color: rgba(77, 166, 255, 0.3);
 }
 
-/* Hide fork filter buttons when changelog active (keep the row for the What Changed button) */
-body.changelog-active #specsForkFilters .fork-filter-btn {
+/* Hide fork filters row when changelog active */
+body.changelog-active #specsForkFilters {
   display: none;
 }
 
