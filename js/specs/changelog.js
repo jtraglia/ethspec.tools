@@ -281,15 +281,6 @@ export function applyChangelogToTree(forkFilter, typeFilter, searchTerm) {
       if (change && matchesFork && matchesSearch) {
         itemNode.classList.remove('tree-filtered');
         visibleItemCount++;
-
-        // Add change-type badge (replaces fork badges visually)
-        const label = itemNode.querySelector('.tree-label');
-        if (label && !label.querySelector('.changelog-badge')) {
-          const badge = document.createElement('span');
-          badge.className = 'changelog-badge ' + (change.type === 'added' ? 'changelog-badge-added' : 'changelog-badge-modified');
-          badge.textContent = change.type === 'added' ? 'NEW' : 'MOD';
-          label.appendChild(badge);
-        }
       } else {
         itemNode.classList.add('tree-filtered');
       }
@@ -363,11 +354,6 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
       code.textContent = name;
       labelEl.appendChild(code);
 
-      const badge = document.createElement('span');
-      badge.className = 'changelog-badge changelog-badge-removed';
-      badge.textContent = 'REM';
-      labelEl.appendChild(badge);
-
       node.appendChild(labelEl);
       childrenContainer.appendChild(node);
     });
@@ -375,10 +361,9 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
 }
 
 /**
- * Remove all changelog badges and injected nodes from the tree
+ * Remove injected removed-item nodes from the tree
  */
 function clearTreeBadges() {
-  document.querySelectorAll('#specsTree .changelog-badge').forEach(badge => badge.remove());
   document.querySelectorAll('#specsTree .changelog-injected-node').forEach(node => node.remove());
 }
 
