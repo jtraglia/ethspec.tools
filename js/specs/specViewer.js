@@ -101,7 +101,7 @@ function getItemSourceLocation(item, info) {
     ? `#L${loc.start}`
     : `#L${loc.start}-L${loc.end}`;
 
-  const url = `https://github.com/ethereum/consensus-specs/blob/${ref}/${loc.file}${lineFragment}`;
+  const url = `https://github.com/ethereum/consensus-specs/blob/${ref}/${loc.file}?plain=1${lineFragment}`;
 
   const displayText = loc.start === loc.end
     ? `${loc.file}#L${loc.start}`
