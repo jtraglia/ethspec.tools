@@ -575,15 +575,34 @@ function displayCode(item, container) {
       content.classList.add('collapsed');
     }
 
-    const codeBox = document.createElement('pre');
-    codeBox.className = 'test-code-box';
+    const table = document.createElement('table');
+    table.className = 'diff-unified code-table';
 
-    const code = document.createElement('code');
-    code.className = 'language-python';
-    code.textContent = value;
+    const lines = value.split('\n');
+    if (lines[lines.length - 1] === '') lines.pop();
 
-    codeBox.appendChild(code);
-    content.appendChild(codeBox);
+    lines.forEach((line, i) => {
+      const row = document.createElement('tr');
+      row.className = 'diff-line-context';
+
+      const lineNum = document.createElement('td');
+      lineNum.className = 'diff-line-number';
+      lineNum.textContent = i + 1;
+
+      const lineContent = document.createElement('td');
+      lineContent.className = 'diff-line-content';
+      if (typeof Prism !== 'undefined' && Prism.languages.python) {
+        lineContent.innerHTML = Prism.highlight(line, Prism.languages.python, 'python');
+      } else {
+        lineContent.textContent = line;
+      }
+
+      row.appendChild(lineNum);
+      row.appendChild(lineContent);
+      table.appendChild(row);
+    });
+
+    content.appendChild(table);
 
     // Toggle functionality
     header.addEventListener('click', () => {
@@ -597,15 +616,9 @@ function displayCode(item, container) {
     container.appendChild(box);
   });
 
-  // Trigger syntax highlighting
-  if (typeof Prism !== 'undefined') {
-    Prism.highlightAllUnder(container);
-  }
-
-  // Add clickable references after syntax highlighting
-  // Use broader selector since Prism may add additional classes
-  container.querySelectorAll('code[class*="language-python"]').forEach(block => {
-    addClickableReferences(block);
+  // Add clickable references to code content cells
+  container.querySelectorAll('.diff-line-content').forEach(cell => {
+    addClickableReferences(cell);
   });
 }
 
