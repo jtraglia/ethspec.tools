@@ -15,7 +15,8 @@ let getCurrentVersionFn = null;
 
 // Fork diff view state (persists across navigation)
 const forkDiffState = {
-  mode: 'code'           // 'code' or 'diff'
+  mode: 'code',          // 'code' or 'diff'
+  expandAll: false       // false = open latest only, true = open all forks
 };
 
 /**
@@ -337,6 +338,32 @@ function createForkDiffToggle(item, container) {
   modeToggle.appendChild(diffBtn);
   bar.appendChild(modeToggle);
 
+  // Latest / All expand toggle
+  const expandToggle = document.createElement('div');
+  expandToggle.className = 'diff-view-toggle';
+
+  const latestBtn = document.createElement('button');
+  latestBtn.className = 'diff-view-btn' + (!forkDiffState.expandAll ? ' active' : '');
+  latestBtn.textContent = 'Latest';
+  latestBtn.addEventListener('click', () => {
+    if (!forkDiffState.expandAll) return;
+    forkDiffState.expandAll = false;
+    renderCodeView(item, container);
+  });
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'diff-view-btn' + (forkDiffState.expandAll ? ' active' : '');
+  allBtn.textContent = 'All';
+  allBtn.addEventListener('click', () => {
+    if (forkDiffState.expandAll) return;
+    forkDiffState.expandAll = true;
+    renderCodeView(item, container);
+  });
+
+  expandToggle.appendChild(latestBtn);
+  expandToggle.appendChild(allBtn);
+  bar.appendChild(expandToggle);
+
   return bar;
 }
 
@@ -362,7 +389,8 @@ function displayForkDiffs(item, container) {
 
   forksReversed.forEach((fork, index) => {
     const value = item.values[fork];
-    const isFirst = index === 0; // newest fork, expanded by default
+    const isFirst = index === 0;
+    const isExpanded = isFirst || forkDiffState.expandAll;
     const isOldest = index === forksReversed.length - 1;
 
     // Find the previous fork (one step older) code for diffing
@@ -379,7 +407,7 @@ function displayForkDiffs(item, container) {
     header.className = 'file-header diff-fork-header';
 
     const icon = document.createElement('i');
-    icon.className = (isFirst ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
+    icon.className = (isExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right') + ' file-toggle-icon';
 
     const nameEl = document.createElement('span');
     nameEl.className = 'file-name-badge';
@@ -453,7 +481,7 @@ function displayForkDiffs(item, container) {
     // Content
     const contentEl = document.createElement('div');
     contentEl.className = 'file-content';
-    if (!isFirst) {
+    if (!isExpanded) {
       contentEl.classList.add('collapsed');
     }
 
@@ -495,6 +523,7 @@ function displayCode(item, container) {
   forksReversed.forEach((fork, index) => {
     const value = item.values[fork];
     const isFirst = index === 0;
+    const isExpanded = isFirst || forkDiffState.expandAll;
 
     const box = document.createElement('div');
     box.className = 'file-box fork-code-block';
@@ -505,7 +534,7 @@ function displayCode(item, container) {
     header.className = 'file-header';
 
     const icon = document.createElement('i');
-    icon.className = isFirst ? 'fas fa-chevron-down file-toggle-icon' : 'fas fa-chevron-right file-toggle-icon';
+    icon.className = isExpanded ? 'fas fa-chevron-down file-toggle-icon' : 'fas fa-chevron-right file-toggle-icon';
 
     const nameEl = document.createElement('span');
     nameEl.className = 'file-name-badge';
@@ -544,7 +573,7 @@ function displayCode(item, container) {
     // Content
     const content = document.createElement('div');
     content.className = 'file-content';
-    if (!isFirst) {
+    if (!isExpanded) {
       content.classList.add('collapsed');
     }
 
