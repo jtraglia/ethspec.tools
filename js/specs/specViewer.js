@@ -675,12 +675,12 @@ export function openForkInViewer(preferredFork) {
     forkToOpen = forkBlocks[0];
   }
 
-  // Collapse all fork blocks, then expand the selected one
+  // Expand the selected fork (and all others if expandAll is set)
   forkBlocks.forEach(block => {
     const content = block.querySelector('.file-content');
     const icon = block.querySelector('.file-toggle-icon');
     if (content && icon) {
-      if (block === forkToOpen) {
+      if (block === forkToOpen || forkDiffState.expandAll) {
         content.classList.remove('collapsed');
         icon.className = 'fas fa-chevron-down file-toggle-icon';
       } else {
