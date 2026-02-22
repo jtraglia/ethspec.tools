@@ -17,7 +17,7 @@ const changelogState = {
   baseItems: null,
   currentItems: null,
   currentForks: [],
-  changes: null,           // Map<name, { type: 'added'|'modified', category, changedForks }>
+  changes: null,           // Map<name, { category, forkChanges: { fork: 'added'|'modified'|'removed' } }>
   removedItems: []         // Array of { name, category }
 };
 
@@ -167,29 +167,40 @@ function computeVersionChanges() {
     Object.values(currentCat).forEach(item => {
       const baseEquiv = baseCat[item.name];
       if (!baseEquiv) {
-        changes.set(item.name, { type: 'added', category, changedForks: [...item.forks] });
+        // Entirely new item — all forks are 'added'
+        const forkChanges = {};
+        item.forks.forEach(f => { forkChanges[f] = 'added'; });
+        changes.set(item.name, { category, forkChanges });
       } else {
         // Compare explicit values at each fork where either version has a redefinition
         const allForks = new Set([...item.forks, ...baseEquiv.forks]);
-        const changedForks = [];
+        const forkChanges = {};
         for (const fork of allForks) {
           const currentVal = item.values[fork];
           const baseVal = baseEquiv.values[fork];
           if (JSON.stringify(currentVal) !== JSON.stringify(baseVal)) {
-            changedForks.push(fork);
+            if (currentVal != null && baseVal == null) {
+              forkChanges[fork] = 'added';
+            } else if (currentVal == null && baseVal != null) {
+              forkChanges[fork] = 'removed';
+            } else {
+              forkChanges[fork] = 'modified';
+            }
           }
         }
-        if (changedForks.length > 0) {
-          changes.set(item.name, { type: 'modified', category, changedForks });
+        if (Object.keys(forkChanges).length > 0) {
+          changes.set(item.name, { category, forkChanges });
         }
       }
     });
 
-    // Items in base but not in current → removed
+    // Items in base but not in current → removed (all forks)
     Object.values(baseCat).forEach(item => {
       if (!currentCat[item.name]) {
         removedItems.push({ name: item.name, category });
-        changes.set(item.name, { type: 'removed', category, changedForks: [...item.forks] });
+        const forkChanges = {};
+        item.forks.forEach(f => { forkChanges[f] = 'removed'; });
+        changes.set(item.name, { category, forkChanges });
       }
     });
   });
@@ -256,13 +267,48 @@ export function applyChangelogToTree(forkFilter, typeFilter, searchTerm) {
       const change = changes.get(name);
 
       // Fork filter — only show items where the selected fork changed
-      const matchesFork = !forkFilter || (change && change.changedForks.includes(forkFilter));
+      const matchesFork = !forkFilter || (change && change.forkChanges[forkFilter]);
       // Search filter
       const matchesSearch = !searchTerm || nameLower.includes(searchTerm);
 
       if (change && matchesFork && matchesSearch) {
         itemNode.classList.remove('tree-filtered');
         visibleItemCount++;
+
+        // Add change-type badges
+        const label = itemNode.querySelector('.tree-label');
+        if (label) {
+          // Remove old badges
+          label.querySelectorAll('.changelog-badge').forEach(b => b.remove());
+          // Compute unique change types for this item (filtered by fork if active)
+          const types = new Set();
+          for (const [fork, type] of Object.entries(change.forkChanges)) {
+            if (!forkFilter || fork === forkFilter) {
+              types.add(type);
+            }
+          }
+          const badgeContainer = document.createElement('span');
+          badgeContainer.className = 'changelog-badges';
+          if (types.has('added')) {
+            const b = document.createElement('span');
+            b.className = 'changelog-badge changelog-badge-added';
+            b.textContent = 'add';
+            badgeContainer.appendChild(b);
+          }
+          if (types.has('modified')) {
+            const b = document.createElement('span');
+            b.className = 'changelog-badge changelog-badge-modified';
+            b.textContent = 'mod';
+            badgeContainer.appendChild(b);
+          }
+          if (types.has('removed')) {
+            const b = document.createElement('span');
+            b.className = 'changelog-badge changelog-badge-removed';
+            b.textContent = 'rem';
+            badgeContainer.appendChild(b);
+          }
+          label.appendChild(badgeContainer);
+        }
       } else {
         itemNode.classList.add('tree-filtered');
       }
@@ -353,10 +399,11 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
 }
 
 /**
- * Remove injected removed-item nodes from the tree
+ * Remove injected removed-item nodes and badges from the tree
  */
 function clearTreeBadges() {
   document.querySelectorAll('#specsTree .changelog-injected-node').forEach(node => node.remove());
+  document.querySelectorAll('#specsTree .changelog-badges').forEach(node => node.remove());
 }
 
 /**
@@ -395,14 +442,6 @@ function renderVersionDiff(item, container) {
   const currentItem = currentItems[item.category]?.[item.name] || null;
   const baseItem = baseItems[item.category]?.[item.name] || null;
   const isVariable = ['constant_vars', 'preset_vars', 'config_vars'].includes(item.category);
-
-  // Handle entirely missing items
-  if (!baseItem) {
-    const msg = document.createElement('div');
-    msg.className = 'diff-item-missing';
-    msg.innerHTML = `<i class="fas fa-plus-circle"></i> Item <code>${escapeHtml(item.name)}</code> is entirely new in ${escapeHtml(currentVersion)}.`;
-    container.appendChild(msg);
-  }
 
   if (!currentItem) {
     // Show the old code as all-removed diffs

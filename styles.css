@@ -1526,6 +1526,53 @@ body.changelog-active .tree-fork-badges {
   display: none;
 }
 
+/* Changelog change-type badges on tree items */
+.changelog-badges {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.changelog-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.changelog-badge-added {
+  background-color: rgba(40, 167, 69, 0.15);
+  color: #28a745;
+}
+
+.changelog-badge-modified {
+  background-color: rgba(0, 123, 255, 0.15);
+  color: #007bff;
+}
+
+.changelog-badge-removed {
+  background-color: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+}
+
+[data-theme="dark"] .changelog-badge-added {
+  background-color: rgba(40, 167, 69, 0.25);
+  color: #5cb85c;
+}
+
+[data-theme="dark"] .changelog-badge-modified {
+  background-color: rgba(0, 123, 255, 0.25);
+  color: #6db3f2;
+}
+
+[data-theme="dark"] .changelog-badge-removed {
+  background-color: rgba(220, 53, 69, 0.25);
+  color: #e57373;
+}
 
 /* ============================================
    LOADING AND ERROR STATES
