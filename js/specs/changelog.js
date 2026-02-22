@@ -383,6 +383,15 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
       codeEl.textContent = name;
       labelEl.appendChild(codeEl);
 
+      // Add REM badge
+      const badgeContainer = document.createElement('span');
+      badgeContainer.className = 'changelog-badges';
+      const b = document.createElement('span');
+      b.className = 'changelog-badge changelog-badge-removed';
+      b.textContent = 'rem';
+      badgeContainer.appendChild(b);
+      labelEl.appendChild(badgeContainer);
+
       // Make clickable — select as a synthetic item so the viewer shows old code
       labelEl.addEventListener('click', () => {
         if (window.selectItem) {
