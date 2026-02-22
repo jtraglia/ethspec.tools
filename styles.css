@@ -1164,12 +1164,11 @@ pre.test-code-box {
   color: white;
 }
 
-/* Fork diff toggle bar (Code / Diff toggle above fork blocks) */
+/* Fork diff toggle bar (Code / Diff toggle in spec header) */
 .fork-diff-toggle-bar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0;
 }
 
 /* Compare header bar with version labels */

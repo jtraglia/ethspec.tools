@@ -86,10 +86,10 @@ export function displaySpec(item, data) {
   const itemId = `specs/${version}/${item.category}-${item.name}`;
   history.replaceState(null, '', `#${itemId}`);
 
-  // Remove any leftover compare controls
+  // Manage Code/Diff toggle in header
   const header = document.querySelector('.spec-header');
-  const existingControls = header.querySelector('.compare-controls');
-  if (existingControls) existingControls.remove();
+  const existingToggle = header.querySelector('.fork-diff-toggle-bar');
+  if (existingToggle) existingToggle.remove();
 
   // Clear existing content
   content.innerHTML = '';
@@ -286,10 +286,13 @@ function renderCodeView(item, container) {
     viewer.classList.toggle('wide-diff', isSideBySideDiff);
   }
 
-  // Add toggle bar for multi-fork items
+  // Add toggle bar for multi-fork items in the spec header
+  const header = document.querySelector('.spec-header');
+  const existingToggle = header.querySelector('.fork-diff-toggle-bar');
+  if (existingToggle) existingToggle.remove();
   const toggleBar = createForkDiffToggle(item, container);
   if (toggleBar) {
-    container.appendChild(toggleBar);
+    header.appendChild(toggleBar);
   }
 
   // Render based on mode
