@@ -92,10 +92,6 @@ export function enterChangelog() {
   // Add body class to hide fork letter badges on tree items
   document.body.classList.add('changelog-active');
 
-  // Mark header button as active
-  const headerBtn = document.getElementById('versionChangelogBtn');
-  if (headerBtn) headerBtn.classList.add('active');
-
   // Find the previous version
   const sorted = [...availableVersions].sort((a, b) => {
     if (a === 'nightly') return -1;
@@ -109,6 +105,14 @@ export function enterChangelog() {
   changelogState.baseVersion = prevVersion;
 
   if (prevVersion) {
+    // Update button text to show version comparison
+    const headerBtn = document.getElementById('versionChangelogBtn');
+    if (headerBtn) {
+      headerBtn.classList.add('active');
+      const textEl = headerBtn.querySelector('.version-changelog-text');
+      if (textEl) textEl.textContent = `${prevVersion} → ${version}`;
+    }
+
     fetchAndComputeVersionChanges(prevVersion);
   }
 }
@@ -135,9 +139,13 @@ export function exitChangelog() {
   // Remove body class
   document.body.classList.remove('changelog-active');
 
-  // Deactivate header button
+  // Deactivate header button and restore text
   const headerBtn = document.getElementById('versionChangelogBtn');
-  if (headerBtn) headerBtn.classList.remove('active');
+  if (headerBtn) {
+    headerBtn.classList.remove('active');
+    const textEl = headerBtn.querySelector('.version-changelog-text');
+    if (textEl) textEl.textContent = 'What Changed';
+  }
 
   // Remove badges from tree
   clearTreeBadges();
@@ -381,16 +389,6 @@ function renderVersionDiff(item, container) {
   const currentItem = currentItems[item.category]?.[item.name] || null;
   const baseItem = baseItems[item.category]?.[item.name] || null;
   const isVariable = ['constant_vars', 'preset_vars', 'config_vars'].includes(item.category);
-
-  // Version header bar
-  const headerBar = document.createElement('div');
-  headerBar.className = 'compare-header-bar';
-  headerBar.innerHTML = `
-    <span class="compare-version-label compare-old">${escapeHtml(baseVersion)}</span>
-    <i class="fas fa-arrow-right compare-arrow"></i>
-    <span class="compare-version-label compare-new">${escapeHtml(currentVersion)}</span>
-  `;
-  container.appendChild(headerBar);
 
   // Handle entirely missing items
   if (!baseItem) {
