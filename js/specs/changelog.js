@@ -329,7 +329,7 @@ function renderRemovedItemsInTree(container, forkFilter, typeFilter, searchTerm)
       node.className = 'tree-node changelog-injected-node';
 
       const labelEl = document.createElement('div');
-      labelEl.className = 'tree-label changelog-removed-label';
+      labelEl.className = 'tree-label';
       labelEl.style.cursor = 'pointer';
 
       const iconEl = document.createElement('span');
@@ -410,12 +410,6 @@ function renderVersionDiff(item, container) {
   }
 
   if (!currentItem) {
-    const msg = document.createElement('div');
-    msg.className = 'diff-item-missing';
-    msg.style.marginBottom = '1rem';
-    msg.innerHTML = `<i class="fas fa-minus-circle"></i> This item was removed in ${escapeHtml(currentVersion)}.`;
-    container.appendChild(msg);
-
     // Show the old code as all-removed diffs
     if (isVariable) {
       renderVariableVersionDiff(null, baseItem, container, baseVersion, currentVersion);

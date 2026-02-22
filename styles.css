@@ -1527,10 +1527,6 @@ body.changelog-active .tree-fork-badges {
   display: none;
 }
 
-/* Muted style for removed item labels in tree */
-.changelog-removed-label {
-  opacity: 0.6;
-}
 
 /* ============================================
    LOADING AND ERROR STATES
