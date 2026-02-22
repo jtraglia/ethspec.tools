@@ -1614,11 +1614,12 @@ pre.test-code-box {
   background-color: var(--hover-bg);
 }
 
-/* Change-type badges on tree items */
+/* Change-type badges on tree items (right-aligned, replacing fork badges) */
 .changelog-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
   font-size: 0.6rem;
@@ -1653,8 +1654,12 @@ pre.test-code-box {
   border-color: rgba(77, 166, 255, 0.3);
 }
 
-/* Hide fork filters row when changelog active */
+/* Hide fork filters row and fork badges when changelog active */
 body.changelog-active #specsForkFilters {
+  display: none;
+}
+
+body.changelog-active .tree-fork-badges {
   display: none;
 }
 

@@ -364,20 +364,13 @@ export function applyChangelogToTree(typeFilter, searchTerm) {
         itemNode.classList.remove('tree-filtered');
         visibleItemCount++;
 
-        // Add change-type badge
+        // Add change-type badge (replaces fork badges visually)
         const label = itemNode.querySelector('.tree-label');
         if (label && !label.querySelector('.changelog-badge')) {
           const badge = document.createElement('span');
           badge.className = 'changelog-badge ' + (change.type === 'added' ? 'changelog-badge-added' : 'changelog-badge-modified');
           badge.textContent = change.type === 'added' ? 'NEW' : 'MOD';
-
-          // Insert before fork badges
-          const forkBadges = label.querySelector('.tree-fork-badges');
-          if (forkBadges) {
-            label.insertBefore(badge, forkBadges);
-          } else {
-            label.appendChild(badge);
-          }
+          label.appendChild(badge);
         }
       } else {
         itemNode.classList.add('tree-filtered');
