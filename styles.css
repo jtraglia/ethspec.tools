@@ -1671,64 +1671,26 @@ body.changelog-active .tree-fork-badges {
   font-style: italic;
 }
 
-/* Changelog removed items section (in sidebar tree) */
-.changelog-removed-section {
-  margin: 0.5rem;
-  padding: 0.75rem;
-  background-color: rgba(220, 53, 69, 0.04);
-  border: 1px solid rgba(220, 53, 69, 0.15);
-  border-radius: 6px;
-}
-
-.changelog-removed-title {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+/* Removed item badge */
+.changelog-badge-removed {
+  background-color: rgba(220, 53, 69, 0.12);
   color: #dc3545;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  border: 1px solid rgba(220, 53, 69, 0.25);
 }
 
-[data-theme="dark"] .changelog-removed-title {
+[data-theme="dark"] .changelog-badge-removed {
+  background-color: rgba(255, 99, 99, 0.15);
   color: #ff6b6b;
+  border-color: rgba(255, 99, 99, 0.3);
 }
 
-[data-theme="dark"] .changelog-removed-section {
-  background-color: rgba(255, 99, 99, 0.04);
-  border-color: rgba(255, 99, 99, 0.15);
+/* Muted style for removed item labels */
+.changelog-removed-label {
+  opacity: 0.6;
 }
 
-.changelog-removed-category {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-top: 0.4rem;
-  margin-bottom: 0.25rem;
-}
-
-.changelog-removed-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-bottom: 0.25rem;
-}
-
-.changelog-removed-item {
-  font-family: "Monaco", "Courier New", monospace;
-  font-size: 0.75rem;
-  background-color: rgba(220, 53, 69, 0.08);
-  border: 1px solid rgba(220, 53, 69, 0.2);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  color: var(--text-color);
-}
-
-[data-theme="dark"] .changelog-removed-item {
-  background-color: rgba(255, 99, 99, 0.08);
-  border-color: rgba(255, 99, 99, 0.2);
+.changelog-removed-label .changelog-badge {
+  opacity: 1;
 }
 
 /* ============================================

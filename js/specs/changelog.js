@@ -6,7 +6,7 @@
 import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
 import { escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
-import { CATEGORY_ORDER, getCategoryDisplayName } from './constants.js';
+import { CATEGORY_ORDER } from './constants.js';
 
 // Changelog state
 const changelogState = {
@@ -394,70 +394,71 @@ export function applyChangelogToTree(typeFilter, searchTerm) {
 }
 
 /**
- * Render removed items section at the bottom of the tree
+ * Inject removed items into the tree as proper tree nodes
  */
 function renderRemovedItemsInTree(container, typeFilter, searchTerm) {
-  // Remove any existing section
-  const existing = container.querySelector('.changelog-removed-section');
-  if (existing) existing.remove();
-
   const removedItems = changelogState.removedItems;
   if (!removedItems || removedItems.length === 0) return;
 
-  // Filter removed items by type and search
-  const filtered = removedItems.filter(item => {
-    if (typeFilter && item.category !== typeFilter) return false;
-    if (searchTerm && !item.name.toLowerCase().includes(searchTerm)) return false;
-    return true;
-  });
-
-  if (filtered.length === 0) return;
-
-  // Group by category
+  // Group by category, filtering as we go
   const byCategory = {};
-  filtered.forEach(item => {
+  removedItems.forEach(item => {
+    if (typeFilter && item.category !== typeFilter) return;
+    if (searchTerm && !item.name.toLowerCase().includes(searchTerm)) return;
     if (!byCategory[item.category]) byCategory[item.category] = [];
     byCategory[item.category].push(item.name);
   });
 
-  const section = document.createElement('div');
-  section.className = 'changelog-removed-section';
+  // Inject into each category's tree-children
+  const categoryNodes = container.querySelectorAll(':scope > .tree-node');
+  categoryNodes.forEach(categoryNode => {
+    const category = categoryNode.dataset.category;
+    const names = byCategory[category];
+    if (!names) return;
 
-  const title = document.createElement('div');
-  title.className = 'changelog-removed-title';
-  title.innerHTML = `<i class="fas fa-minus-circle"></i> Removed (${filtered.length})`;
-  section.appendChild(title);
+    const childrenContainer = categoryNode.querySelector('.tree-children');
+    if (!childrenContainer) return;
 
-  CATEGORY_ORDER.forEach(category => {
-    const items = byCategory[category];
-    if (!items) return;
+    // Un-hide and expand this category if it was filtered out
+    categoryNode.classList.remove('tree-filtered');
+    childrenContainer.classList.remove('collapsed');
+    const icon = categoryNode.querySelector('.tree-icon');
+    if (icon) icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
-    const catLabel = document.createElement('div');
-    catLabel.className = 'changelog-removed-category';
-    catLabel.textContent = getCategoryDisplayName(category);
-    section.appendChild(catLabel);
+    names.sort().forEach(name => {
+      const node = document.createElement('div');
+      node.className = 'tree-node changelog-injected-node';
 
-    const list = document.createElement('div');
-    list.className = 'changelog-removed-list';
-    items.sort().forEach(name => {
-      const item = document.createElement('span');
-      item.className = 'changelog-removed-item';
-      item.textContent = name;
-      list.appendChild(item);
+      const labelEl = document.createElement('div');
+      labelEl.className = 'tree-label changelog-removed-label';
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'tree-icon';
+      iconEl.innerHTML = '<i class="fas fa-cube"></i>';
+      labelEl.appendChild(iconEl);
+
+      const code = document.createElement('code');
+      code.className = 'tree-item-name';
+      code.textContent = name;
+      labelEl.appendChild(code);
+
+      const badge = document.createElement('span');
+      badge.className = 'changelog-badge changelog-badge-removed';
+      badge.textContent = 'REM';
+      labelEl.appendChild(badge);
+
+      node.appendChild(labelEl);
+      childrenContainer.appendChild(node);
     });
-    section.appendChild(list);
   });
-
-  container.appendChild(section);
 }
 
 /**
- * Remove all changelog badges and removed section from the tree
+ * Remove all changelog badges and injected nodes from the tree
  */
 function clearTreeBadges() {
   document.querySelectorAll('#specsTree .changelog-badge').forEach(badge => badge.remove());
-  const removed = document.querySelector('#specsTree .changelog-removed-section');
-  if (removed) removed.remove();
+  document.querySelectorAll('#specsTree .changelog-injected-node').forEach(node => node.remove());
 }
 
 /**
