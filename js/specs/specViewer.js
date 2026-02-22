@@ -4,7 +4,7 @@
 
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
-import { renderUnifiedDiff, renderSideBySideDiff, renderAllAdded } from './specCompare.js';
+import { renderUnifiedDiff, renderAllAdded } from './specCompare.js';
 import { isChangelogActive, renderChangelogItem } from './changelog.js';
 
 // Current item being displayed
@@ -15,8 +15,7 @@ let getCurrentVersionFn = null;
 
 // Fork diff view state (persists across navigation)
 const forkDiffState = {
-  mode: 'code',           // 'code' or 'diff'
-  diffViewMode: 'unified' // 'unified' or 'side-by-side'
+  mode: 'code'           // 'code' or 'diff'
 };
 
 /**
@@ -278,13 +277,6 @@ function renderCodeView(item, container) {
   container.innerHTML = '';
 
   const hasMultipleForks = item.forks.length >= 2;
-  const isSideBySideDiff = hasMultipleForks && forkDiffState.mode === 'diff' && forkDiffState.diffViewMode === 'side-by-side';
-
-  // Widen the viewer for side-by-side diffs
-  const viewer = document.getElementById('specViewer');
-  if (viewer) {
-    viewer.classList.toggle('wide-diff', isSideBySideDiff);
-  }
 
   // Add toggle bar for multi-fork items in the spec header
   const header = document.querySelector('.spec-header');
@@ -344,34 +336,6 @@ function createForkDiffToggle(item, container) {
   modeToggle.appendChild(codeBtn);
   modeToggle.appendChild(diffBtn);
   bar.appendChild(modeToggle);
-
-  // Unified / Side-by-side sub-toggle (only in diff mode)
-  if (forkDiffState.mode === 'diff') {
-    const viewToggle = document.createElement('div');
-    viewToggle.className = 'diff-view-toggle';
-
-    const unifiedBtn = document.createElement('button');
-    unifiedBtn.className = 'diff-view-btn' + (forkDiffState.diffViewMode === 'unified' ? ' active' : '');
-    unifiedBtn.textContent = 'Unified';
-    unifiedBtn.addEventListener('click', () => {
-      if (forkDiffState.diffViewMode === 'unified') return;
-      forkDiffState.diffViewMode = 'unified';
-      renderCodeView(item, container);
-    });
-
-    const sideBySideBtn = document.createElement('button');
-    sideBySideBtn.className = 'diff-view-btn' + (forkDiffState.diffViewMode === 'side-by-side' ? ' active' : '');
-    sideBySideBtn.textContent = 'Side-by-side';
-    sideBySideBtn.addEventListener('click', () => {
-      if (forkDiffState.diffViewMode === 'side-by-side') return;
-      forkDiffState.diffViewMode = 'side-by-side';
-      renderCodeView(item, container);
-    });
-
-    viewToggle.appendChild(unifiedBtn);
-    viewToggle.appendChild(sideBySideBtn);
-    bar.appendChild(viewToggle);
-  }
 
   return bar;
 }
@@ -500,11 +464,7 @@ function displayForkDiffs(item, container) {
       // Oldest fork: show all lines as added
       renderAllAdded(diffContainer, strippedValue);
     } else {
-      if (forkDiffState.diffViewMode === 'unified') {
-        renderUnifiedDiff(diffContainer, strippedOlderCode, strippedValue);
-      } else {
-        renderSideBySideDiff(diffContainer, strippedOlderCode, strippedValue);
-      }
+      renderUnifiedDiff(diffContainer, strippedOlderCode, strippedValue);
     }
 
     contentEl.appendChild(diffContainer);
