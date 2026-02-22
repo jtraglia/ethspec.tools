@@ -677,12 +677,16 @@ input:checked + .toggle-slider:before {
   text-decoration: underline;
 }
 
-.source-link code {
+.source-link-text {
   font-family: "Monaco", "Courier New", monospace;
   font-size: 0.7rem;
   background-color: var(--hover-bg);
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
+}
+
+.source-link-icon {
+  display: none;
 }
 
 /* Source link in variable table rows */
@@ -2066,6 +2070,16 @@ pre[class*="language-"] {
   .variable-table td {
     padding: 0.5rem 0.75rem;
     font-size: 0.85rem;
+  }
+
+  /* Source link: show icon instead of path on mobile */
+  .source-link-text {
+    display: none;
+  }
+
+  .source-link-icon {
+    display: inline;
+    font-size: 1rem;
   }
 
   /* Code blocks: smaller on mobile */

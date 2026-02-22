@@ -122,7 +122,7 @@ function createSourceLinkElement(itemName, fork) {
   link.target = '_blank';
   link.rel = 'noopener';
   link.className = 'source-link';
-  link.innerHTML = `<code>${escapeHtml(sourceData.displayText)}</code>`;
+  link.innerHTML = `<code class="source-link-text">${escapeHtml(sourceData.displayText)}</code><i class="fab fa-github source-link-icon"></i>`;
   link.addEventListener('click', (e) => e.stopPropagation());
   return link;
 }
