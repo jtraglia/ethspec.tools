@@ -253,37 +253,6 @@ function renderChangelogBar() {
   bar.classList.remove('hidden');
   bar.innerHTML = '';
 
-  const { availableVersions, version } = getStateFn();
-
-  // Version dropdown
-  const select = document.createElement('select');
-  select.className = 'changelog-base-select';
-
-  // Sort versions: nightly first, then semver descending
-  const sorted = [...availableVersions].sort((a, b) => {
-    if (a === 'nightly') return -1;
-    if (b === 'nightly') return 1;
-    return compareVersions(a, b);
-  });
-
-  sorted.forEach(v => {
-    if (v === version) return;
-    const option = document.createElement('option');
-    option.value = v;
-    option.textContent = v;
-    if (v === changelogState.baseVersion) option.selected = true;
-    select.appendChild(option);
-  });
-
-  select.addEventListener('change', () => {
-    changelogState.baseVersion = select.value;
-    changelogState.changes = null;
-    renderChangelogBar();
-    fetchAndComputeVersionChanges(select.value);
-  });
-
-  bar.appendChild(select);
-
   // Change summary
   const summary = document.createElement('span');
   summary.className = 'changelog-summary';
