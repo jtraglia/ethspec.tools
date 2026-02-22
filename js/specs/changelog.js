@@ -5,7 +5,7 @@
 
 import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion, getAvailableVersions } from './specsMain.js';
-import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderSideBySideDiff, renderAllAdded, renderAllRemoved, exitCompare, isCompareActive } from './specCompare.js';
+import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, exitCompare, isCompareActive } from './specCompare.js';
 import { getForkDisplayName, getForkColor, getCategoryDisplayName, CATEGORY_ORDER } from './constants.js';
 
 // Changelog state
@@ -24,8 +24,7 @@ const changelogState = {
   currentForks: [],
   // Computed results
   changes: null,           // Map<name, { type: 'added'|'modified', category }>
-  removedItems: [],        // Array of { name, category } (version mode only)
-  viewMode: 'unified'      // 'unified' or 'side-by-side'
+  removedItems: []         // Array of { name, category } (version mode only)
 };
 
 // Cache fetched version data
@@ -567,10 +566,6 @@ function renderForkDiff(item, container) {
     `;
   }
 
-  // Add view mode toggle
-  const viewToggle = createViewModeToggle(item, container, () => renderForkDiff(item, container));
-  headerBar.appendChild(viewToggle);
-
   container.appendChild(headerBar);
 
   // Render diff
@@ -584,11 +579,7 @@ function renderForkDiff(item, container) {
   if (!strippedOlder) {
     renderAllAdded(diffContainer, strippedCurrent);
   } else {
-    if (changelogState.viewMode === 'unified') {
-      renderUnifiedDiff(diffContainer, strippedOlder, strippedCurrent);
-    } else {
-      renderSideBySideDiff(diffContainer, strippedOlder, strippedCurrent);
-    }
+    renderUnifiedDiff(diffContainer, strippedOlder, strippedCurrent);
   }
 
   const box = document.createElement('div');
@@ -667,11 +658,6 @@ function renderVersionDiff(item, container) {
     <span class="compare-version-label compare-new">${escapeHtml(currentVersion)}</span>
   `;
 
-  if (!isVariable) {
-    const viewToggle = createViewModeToggle(item, container, () => renderVersionDiff(item, container));
-    headerBar.appendChild(viewToggle);
-  }
-
   container.appendChild(headerBar);
 
   // Handle missing items
@@ -716,11 +702,7 @@ function renderVersionDiff(item, container) {
     } else if (currentStr === baseStr) {
       diffContainer.innerHTML = '<div class="diff-no-changes">No changes in effective code</div>';
     } else {
-      if (changelogState.viewMode === 'unified') {
-        renderUnifiedDiff(diffContainer, baseStr, currentStr);
-      } else {
-        renderSideBySideDiff(diffContainer, baseStr, currentStr);
-      }
+      renderUnifiedDiff(diffContainer, baseStr, currentStr);
     }
 
     const box = document.createElement('div');
@@ -728,44 +710,6 @@ function renderVersionDiff(item, container) {
     box.appendChild(diffContainer);
     container.appendChild(box);
   }
-}
-
-/**
- * Create a view mode toggle (unified/side-by-side)
- */
-function createViewModeToggle(item, container, rerenderFn) {
-  const wrapper = document.createElement('div');
-  wrapper.style.marginLeft = 'auto';
-
-  const viewToggle = document.createElement('div');
-  viewToggle.className = 'diff-view-toggle';
-
-  const unifiedBtn = document.createElement('button');
-  unifiedBtn.className = 'diff-view-btn' + (changelogState.viewMode === 'unified' ? ' active' : '');
-  unifiedBtn.textContent = 'Unified';
-  unifiedBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (changelogState.viewMode === 'unified') return;
-    changelogState.viewMode = 'unified';
-    container.innerHTML = '';
-    rerenderFn();
-  });
-
-  const sideBySideBtn = document.createElement('button');
-  sideBySideBtn.className = 'diff-view-btn' + (changelogState.viewMode === 'side-by-side' ? ' active' : '');
-  sideBySideBtn.textContent = 'Side-by-side';
-  sideBySideBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (changelogState.viewMode === 'side-by-side') return;
-    changelogState.viewMode = 'side-by-side';
-    container.innerHTML = '';
-    rerenderFn();
-  });
-
-  viewToggle.appendChild(unifiedBtn);
-  viewToggle.appendChild(sideBySideBtn);
-  wrapper.appendChild(viewToggle);
-  return wrapper;
 }
 
 /**
