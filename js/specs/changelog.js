@@ -42,28 +42,48 @@ export function isChangelogActive() {
 }
 
 /**
- * Initialize changelog — creates the "What Changed" button in #changelogControls
+ * Initialize changelog — adds "What Changed" button to the fork filters row
  */
 export function initChangelog(stateFn, filtersFn) {
   getStateFn = stateFn;
   applyFiltersFn = filtersFn;
 
-  const container = document.getElementById('changelogControls');
-  container.innerHTML = '';
-  container.classList.remove('hidden');
+  // Remove any existing button
+  const existing = document.getElementById('changelogBtn');
+  if (existing) existing.remove();
 
+  // Add button to fork filters row
+  const forkFilters = document.getElementById('specsForkFilters');
   const btn = document.createElement('button');
+  btn.id = 'changelogBtn';
   btn.className = 'changelog-btn';
   btn.innerHTML = '<i class="fas fa-bolt"></i> What Changed';
-  btn.addEventListener('click', () => {
-    if (changelogState.active) {
-      exitChangelog();
-    } else {
-      enterChangelog('fork');
-    }
-  });
 
-  container.appendChild(btn);
+  // Disable if this is the oldest (last in sorted order) version with no forks to compare
+  const { forks, availableVersions, version } = getStateFn();
+  const sorted = [...availableVersions].sort((a, b) => {
+    if (a === 'nightly') return -1;
+    if (b === 'nightly') return 1;
+    return compareVersions(a, b);
+  });
+  const isOldestVersion = sorted[sorted.length - 1] === version;
+  const hasSingleFork = forks.length <= 1;
+
+  if (isOldestVersion && hasSingleFork) {
+    btn.disabled = true;
+    btn.classList.add('disabled');
+    btn.title = 'No changes to show for the oldest version';
+  } else {
+    btn.addEventListener('click', () => {
+      if (changelogState.active) {
+        exitChangelog();
+      } else {
+        enterChangelog('fork');
+      }
+    });
+  }
+
+  forkFilters.appendChild(btn);
 }
 
 /**
@@ -82,12 +102,12 @@ export function enterChangelog(compareType) {
   changelogState.currentItems = collectItems(data, forks);
   changelogState.currentForks = forks;
 
-  // Add body class to hide fork filters
+  // Add body class to hide fork filter buttons
   document.body.classList.add('changelog-active');
 
   // Mark the What Changed button as active
-  const controlsBtn = document.querySelector('#changelogControls .changelog-btn');
-  if (controlsBtn) controlsBtn.classList.add('active');
+  const btn = document.getElementById('changelogBtn');
+  if (btn) btn.classList.add('active');
 
   if (compareType === 'fork') {
     // Default to the latest fork
@@ -148,8 +168,8 @@ export function exitChangelog() {
   bar.innerHTML = '';
 
   // Deactivate the What Changed button
-  const controlsBtn = document.querySelector('#changelogControls .changelog-btn');
-  if (controlsBtn) controlsBtn.classList.remove('active');
+  const btn = document.getElementById('changelogBtn');
+  if (btn) btn.classList.remove('active');
 
   // Remove badges from tree
   clearTreeBadges();
