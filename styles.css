@@ -685,8 +685,8 @@ input:checked + .toggle-slider:before {
   border-radius: 3px;
 }
 
-.source-link-icon {
-  display: none;
+.source-link .source-link-icon {
+  display: none !important;
 }
 
 /* Source link in variable table rows */
@@ -1958,8 +1958,10 @@ pre[class*="language-"] {
   }
 
   .version-changelog-btn {
-    padding: 0.4rem 0.6rem;
-    align-self: center;
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
   }
 
   /* Hide dark mode label icons on mobile to save space */
@@ -2091,8 +2093,8 @@ pre[class*="language-"] {
     display: none;
   }
 
-  .source-link-icon {
-    display: inline;
+  .source-link .source-link-icon {
+    display: inline !important;
     font-size: 1rem;
   }
 
