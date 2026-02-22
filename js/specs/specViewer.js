@@ -26,11 +26,6 @@ export function setGetCurrentVersion(fn) {
   getCurrentVersionFn = fn;
 }
 
-// Register callback for when comparison mode exits (re-render normal view)
-setOnExitCallback((item, data) => {
-  displaySpec(item, data);
-});
-
 /**
  * Create a "Used by" section showing items that reference this item
  * @param {string} itemName - The name of the current item
