@@ -9,6 +9,7 @@ import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.
 import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
 import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
 import { exitCompare } from './specCompare.js';
+import { initChangelog, exitChangelog, isChangelogActive, applyChangelogToTree } from './changelog.js';
 
 // Application state
 const state = {
@@ -106,7 +107,11 @@ function buildTypeFilters() {
  * Apply all filters to the tree
  */
 function applyFilters() {
-  filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
+  if (isChangelogActive()) {
+    applyChangelogToTree(state.activeTypeFilter, state.searchTerm);
+  } else {
+    filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
+  }
 }
 
 /**
@@ -146,6 +151,14 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
   // Show spec viewer, hide welcome
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('specViewer').classList.remove('hidden');
+
+  // If navigating to a non-changed item via reference while changelog is active, exit changelog
+  if (isChangelogActive()) {
+    const changes = window._changelogChanges;
+    if (changes && !changes.has(item.name)) {
+      exitChangelog();
+    }
+  }
 
   // Notify main.js that we have a selection
   setSpecsHasSelection(true);
@@ -249,7 +262,7 @@ function parseVersion(version) {
 /**
  * Compare two version strings for sorting
  */
-function compareVersions(a, b) {
+export function compareVersions(a, b) {
   const va = parseVersion(a);
   const vb = parseVersion(b);
 
@@ -290,6 +303,7 @@ export function populateVersionDropdown() {
 async function onVersionChange(version) {
   if (version === state.currentVersion) return;
 
+  exitChangelog();
   exitCompare(true);
 
   const itemNameToFind = state.currentItemName;
@@ -376,6 +390,14 @@ async function loadVersionData(version) {
 
     setOnItemSelectCallback(onItemSelect);
     buildTree(state.data, state.forks);
+
+    // Initialize changelog button
+    initChangelog(() => ({
+      data: state.data,
+      forks: state.forks,
+      version: state.currentVersion,
+      availableVersions: state.availableVersions
+    }), applyFilters);
 
     if (savedForkFilter || savedTypeFilter || savedSearchTerm) {
       applyFilters();

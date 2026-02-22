@@ -8,7 +8,7 @@ import { extractForks, getAvailableVersions, getCurrentVersion } from './specsMa
 import { getForkDisplayName, getForkColor } from './constants.js';
 
 // Fork order for resolving effective values
-const FORK_ORDER = ['PHASE0', 'ALTAIR', 'BELLATRIX', 'CAPELLA', 'DENEB', 'ELECTRA', 'FULU', 'GLOAS'];
+export const FORK_ORDER = ['PHASE0', 'ALTAIR', 'BELLATRIX', 'CAPELLA', 'DENEB', 'ELECTRA', 'FULU', 'GLOAS'];
 
 // Comparison state
 const compareState = {
@@ -851,7 +851,7 @@ function resolveVariableValueAtFork(item, fork) {
 /**
  * Escape HTML special characters
  */
-function escapeHtml(text) {
+export function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;

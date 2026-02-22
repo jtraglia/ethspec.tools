@@ -5,6 +5,7 @@
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
 import { isCompareActive, updateCompareItem, createCompareControls, setOnExitCallback, renderUnifiedDiff, renderSideBySideDiff, renderAllAdded } from './specCompare.js';
+import { isChangelogActive, renderChangelogItem } from './changelog.js';
 
 // Current item being displayed
 let currentItem = null;
@@ -102,6 +103,12 @@ export function displaySpec(item, data) {
   // If comparison mode is active, render comparison instead of normal view
   if (isCompareActive()) {
     updateCompareItem(item, data);
+    return;
+  }
+
+  // If changelog mode is active, render changelog diff instead of normal view
+  if (isChangelogActive()) {
+    renderChangelogItem(item, content);
     return;
   }
 
