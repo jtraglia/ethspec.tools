@@ -7,6 +7,7 @@ import { collectItems } from './tree.js';
 import { extractForks, compareVersions, getCurrentVersion } from './specsMain.js';
 import { FORK_ORDER, escapeHtml, renderUnifiedDiff, renderAllAdded, renderAllRemoved } from './specCompare.js';
 import { CATEGORY_ORDER, getForkDisplayName, getForkColor } from './constants.js';
+import { addClickableReferences } from './references.js';
 
 // Changelog state
 const changelogState = {
@@ -422,6 +423,11 @@ function clearTreeBadges() {
 export function renderChangelogItem(item, container) {
   container.innerHTML = '';
   renderVersionDiff(item, container);
+
+  // Add clickable references to diff content cells
+  container.querySelectorAll('.diff-line-content').forEach(cell => {
+    addClickableReferences(cell);
+  });
 }
 
 /**

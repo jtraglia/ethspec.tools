@@ -506,6 +506,11 @@ function displayForkDiffs(item, container) {
     box.appendChild(contentEl);
     container.appendChild(box);
   });
+
+  // Add clickable references to diff content cells
+  container.querySelectorAll('.diff-line-content').forEach(cell => {
+    addClickableReferences(cell);
+  });
 }
 
 /**
