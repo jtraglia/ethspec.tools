@@ -1952,9 +1952,14 @@ pre[class*="language-"] {
     display: none !important;
   }
 
-  /* Version changelog button: icon only on mobile */
+  /* Version changelog button: icon only, match height of version select */
   .version-changelog-text {
     display: none;
+  }
+
+  .version-changelog-btn {
+    padding: 0.4rem 0.6rem;
+    align-self: center;
   }
 
   /* Hide dark mode label icons on mobile to save space */
@@ -2004,15 +2009,29 @@ pre[class*="language-"] {
     padding: 2rem 1rem;
   }
 
-  /* Spec/Test viewer: allow text wrapping */
-  .spec-header h2,
-  .test-header h2 {
+  /* Spec header: stack title and toggle bar vertically */
+  .spec-header {
+    flex-wrap: wrap;
+  }
+
+  .spec-header h2 {
     white-space: normal;
     word-break: break-word;
   }
 
   .spec-header h2 code {
     font-size: 1.1rem;
+  }
+
+  .fork-diff-toggle-bar {
+    width: 100%;
+    order: 3;
+  }
+
+  /* Test header: allow text wrapping */
+  .test-header h2 {
+    white-space: normal;
+    word-break: break-word;
   }
 
   /* Test header: stack on mobile */
@@ -2037,11 +2056,6 @@ pre[class*="language-"] {
 
   .diff-panel {
     max-height: 400px;
-  }
-
-  /* Fork diff toggle bar: wrap on mobile */
-  .fork-diff-toggle-bar {
-    flex-wrap: wrap;
   }
 
   /* Compare controls: wrap */
