@@ -35,19 +35,33 @@ cd "$TEMP_DIR/repo"
 # Get all version tags (v*.*.*)
 ALL_TAGS=$(git tag -l "v*.*.*" | sort -V)
 
-# Filter to get only stable versions strictly newer than MIN_VERSION
-# sort -V places pre-release tags (e.g., v1.6.0-beta.2) after the stable
-# release (v1.6.0), so we skip any tag containing a hyphen (pre-release)
-# and only include tags that sort after MIN_VERSION.
+# Filter to tags >= MIN_VERSION, including pre-release tags for newer versions.
+# For example, if MIN_VERSION=v1.6.0:
+#   v1.5.0        -> skip (older)
+#   v1.6.0        -> include
+#   v1.6.0-beta.2 -> skip (pre-release of MIN_VERSION)
+#   v1.7.0-alpha.0 -> include (pre-release of a newer version)
+#   v1.7.0        -> include
 NEW_TAGS=""
+# Extract the base version (without v prefix) from MIN_VERSION for comparison
+MIN_BASE="${MIN_VERSION#v}"
 for tag in $ALL_TAGS; do
-  # Skip pre-release versions (alpha, beta, rc, etc.)
-  if [[ "$tag" == *-* ]]; then
-    continue
-  fi
-  # Include MIN_VERSION and anything that sorts after it
-  if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | tail -1)" = "$tag" ]; then
-    NEW_TAGS="$NEW_TAGS $tag"
+  # Extract base version (part before any hyphen)
+  tag_no_v="${tag#v}"
+  tag_base="${tag_no_v%%-*}"
+
+  # Compare base versions: if the tag's base is strictly newer than MIN_VERSION's
+  # base, include it (even if it's a pre-release like v1.7.0-alpha.0)
+  if [ "$tag_base" != "$MIN_BASE" ]; then
+    # Different base version: only include if it sorts >= MIN_VERSION's base
+    if [ "$(printf '%s\n%s' "$MIN_BASE" "$tag_base" | sort -V | tail -1)" = "$tag_base" ]; then
+      NEW_TAGS="$NEW_TAGS $tag"
+    fi
+  else
+    # Same base version as MIN_VERSION: only include the stable release, skip pre-releases
+    if [[ "$tag" != *-* ]]; then
+      NEW_TAGS="$NEW_TAGS $tag"
+    fi
   fi
 done
 
