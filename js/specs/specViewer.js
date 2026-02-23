@@ -4,7 +4,7 @@
 
 import { getForkDisplayName, getForkColor, getForkShortLabel, getCategoryDisplayName } from './constants.js';
 import { addClickableReferences, getUsedBy, navigateToReference } from './references.js';
-import { renderUnifiedDiff, renderAllAdded } from './specCompare.js';
+import { renderUnifiedDiff, renderAllAdded, highlightCodeBlock } from './specCompare.js';
 import { isChangelogActive, renderChangelogItem } from './changelog.js';
 
 // Current item being displayed
@@ -681,6 +681,7 @@ function displayCode(item, container) {
 
     const lines = value.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
+    const highlighted = highlightCodeBlock(value);
 
     lines.forEach((line, i) => {
       const row = document.createElement('tr');
@@ -692,11 +693,7 @@ function displayCode(item, container) {
 
       const lineContent = document.createElement('td');
       lineContent.className = 'diff-line-content';
-      if (typeof Prism !== 'undefined' && Prism.languages.python) {
-        lineContent.innerHTML = Prism.highlight(line, Prism.languages.python, 'python');
-      } else {
-        lineContent.textContent = line;
-      }
+      lineContent.innerHTML = highlighted[i];
 
       row.appendChild(lineNum);
       row.appendChild(lineContent);

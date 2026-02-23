@@ -544,48 +544,50 @@ function renderCodeComparison(container, oldItem, newItem, oldVer, newVer, oldFo
  */
 export function renderUnifiedDiff(container, oldCode, newCode) {
   const changes = Diff.diffLines(oldCode, newCode);
+  const oldHighlighted = highlightCodeBlock(oldCode);
+  const newHighlighted = highlightCodeBlock(newCode);
   const table = document.createElement('table');
   table.className = 'diff-unified';
 
-  let oldLineNum = 1;
-  let newLineNum = 1;
+  let oldLineIdx = 0;
+  let newLineIdx = 0;
 
   changes.forEach(part => {
     const lines = part.value.split('\n');
     // Remove trailing empty string from split
     if (lines[lines.length - 1] === '') lines.pop();
 
-    lines.forEach(line => {
+    lines.forEach(() => {
       const row = document.createElement('tr');
 
       if (part.added) {
         row.className = 'diff-line-added';
         row.innerHTML = `
           <td class="diff-line-number"></td>
-          <td class="diff-line-number">${newLineNum}</td>
+          <td class="diff-line-number">${newLineIdx + 1}</td>
           <td class="diff-line-prefix">+</td>
-          <td class="diff-line-content">${highlightLine(line)}</td>
+          <td class="diff-line-content">${newHighlighted[newLineIdx]}</td>
         `;
-        newLineNum++;
+        newLineIdx++;
       } else if (part.removed) {
         row.className = 'diff-line-removed';
         row.innerHTML = `
-          <td class="diff-line-number">${oldLineNum}</td>
+          <td class="diff-line-number">${oldLineIdx + 1}</td>
           <td class="diff-line-number"></td>
           <td class="diff-line-prefix">-</td>
-          <td class="diff-line-content">${highlightLine(line)}</td>
+          <td class="diff-line-content">${oldHighlighted[oldLineIdx]}</td>
         `;
-        oldLineNum++;
+        oldLineIdx++;
       } else {
         row.className = 'diff-line-context';
         row.innerHTML = `
-          <td class="diff-line-number">${oldLineNum}</td>
-          <td class="diff-line-number">${newLineNum}</td>
+          <td class="diff-line-number">${oldLineIdx + 1}</td>
+          <td class="diff-line-number">${newLineIdx + 1}</td>
           <td class="diff-line-prefix"> </td>
-          <td class="diff-line-content">${highlightLine(line)}</td>
+          <td class="diff-line-content">${newHighlighted[newLineIdx]}</td>
         `;
-        oldLineNum++;
-        newLineNum++;
+        oldLineIdx++;
+        newLineIdx++;
       }
 
       table.appendChild(row);
@@ -613,15 +615,17 @@ export function renderSideBySideDiff(container, oldCode, newCode) {
   rightTable.className = 'diff-panel-table';
 
   const changes = Diff.diffLines(oldCode, newCode);
+  const oldHighlighted = highlightCodeBlock(oldCode);
+  const newHighlighted = highlightCodeBlock(newCode);
 
-  let oldLineNum = 1;
-  let newLineNum = 1;
+  let oldLineIdx = 0;
+  let newLineIdx = 0;
 
   changes.forEach(part => {
     const lines = part.value.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
 
-    lines.forEach(line => {
+    lines.forEach(() => {
       if (part.added) {
         // Empty row on left, added on right
         const leftRow = document.createElement('tr');
@@ -631,34 +635,34 @@ export function renderSideBySideDiff(container, oldCode, newCode) {
 
         const rightRow = document.createElement('tr');
         rightRow.className = 'diff-line-added';
-        rightRow.innerHTML = `<td class="diff-line-number">${newLineNum}</td><td class="diff-line-content">${escapeHtml(line)}</td>`;
+        rightRow.innerHTML = `<td class="diff-line-number">${newLineIdx + 1}</td><td class="diff-line-content">${newHighlighted[newLineIdx]}</td>`;
         rightTable.appendChild(rightRow);
-        newLineNum++;
+        newLineIdx++;
       } else if (part.removed) {
         // Removed on left, empty on right
         const leftRow = document.createElement('tr');
         leftRow.className = 'diff-line-removed';
-        leftRow.innerHTML = `<td class="diff-line-number">${oldLineNum}</td><td class="diff-line-content">${escapeHtml(line)}</td>`;
+        leftRow.innerHTML = `<td class="diff-line-number">${oldLineIdx + 1}</td><td class="diff-line-content">${oldHighlighted[oldLineIdx]}</td>`;
         leftTable.appendChild(leftRow);
 
         const rightRow = document.createElement('tr');
         rightRow.className = 'diff-line-side-empty';
         rightRow.innerHTML = `<td class="diff-line-number"></td><td class="diff-line-content"></td>`;
         rightTable.appendChild(rightRow);
-        oldLineNum++;
+        oldLineIdx++;
       } else {
         // Context line on both sides
         const leftRow = document.createElement('tr');
         leftRow.className = 'diff-line-context';
-        leftRow.innerHTML = `<td class="diff-line-number">${oldLineNum}</td><td class="diff-line-content">${escapeHtml(line)}</td>`;
+        leftRow.innerHTML = `<td class="diff-line-number">${oldLineIdx + 1}</td><td class="diff-line-content">${oldHighlighted[oldLineIdx]}</td>`;
         leftTable.appendChild(leftRow);
 
         const rightRow = document.createElement('tr');
         rightRow.className = 'diff-line-context';
-        rightRow.innerHTML = `<td class="diff-line-number">${newLineNum}</td><td class="diff-line-content">${escapeHtml(line)}</td>`;
+        rightRow.innerHTML = `<td class="diff-line-number">${newLineIdx + 1}</td><td class="diff-line-content">${newHighlighted[newLineIdx]}</td>`;
         rightTable.appendChild(rightRow);
-        oldLineNum++;
-        newLineNum++;
+        oldLineIdx++;
+        newLineIdx++;
       }
     });
   });
@@ -694,20 +698,23 @@ export function renderSideBySideDiff(container, oldCode, newCode) {
 export function renderAllAdded(container, code) {
   const table = document.createElement('table');
   table.className = 'diff-unified';
+  const highlighted = highlightCodeBlock(code);
+  // Remove trailing empty line if present
   const lines = code.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
+  const lineCount = lines.length;
 
-  lines.forEach((line, i) => {
+  for (let i = 0; i < lineCount; i++) {
     const row = document.createElement('tr');
     row.className = 'diff-line-added';
     row.innerHTML = `
       <td class="diff-line-number"></td>
       <td class="diff-line-number">${i + 1}</td>
       <td class="diff-line-prefix">+</td>
-      <td class="diff-line-content">${highlightLine(line)}</td>
+      <td class="diff-line-content">${highlighted[i]}</td>
     `;
     table.appendChild(row);
-  });
+  }
 
   container.appendChild(table);
 }
@@ -718,20 +725,22 @@ export function renderAllAdded(container, code) {
 export function renderAllRemoved(container, code) {
   const table = document.createElement('table');
   table.className = 'diff-unified';
+  const highlighted = highlightCodeBlock(code);
   const lines = code.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
+  const lineCount = lines.length;
 
-  lines.forEach((line, i) => {
+  for (let i = 0; i < lineCount; i++) {
     const row = document.createElement('tr');
     row.className = 'diff-line-removed';
     row.innerHTML = `
       <td class="diff-line-number">${i + 1}</td>
       <td class="diff-line-number"></td>
       <td class="diff-line-prefix">-</td>
-      <td class="diff-line-content">${highlightLine(line)}</td>
+      <td class="diff-line-content">${highlighted[i]}</td>
     `;
     table.appendChild(row);
-  });
+  }
 
   container.appendChild(table);
 }
@@ -858,11 +867,41 @@ export function escapeHtml(text) {
 }
 
 /**
- * Syntax-highlight a line of Python code using Prism
+ * Syntax-highlight an entire code block and return an array of per-line HTML strings.
+ * Highlights the full block so Prism understands multi-line constructs (docstrings, etc.),
+ * then splits into lines while preserving open span tags across line boundaries.
  */
-function highlightLine(line) {
-  if (typeof Prism !== 'undefined' && Prism.languages.python) {
-    return Prism.highlight(line, Prism.languages.python, 'python');
+export function highlightCodeBlock(code) {
+  if (typeof Prism === 'undefined' || !Prism.languages.python) {
+    return code.split('\n').map(line => escapeHtml(line));
   }
-  return escapeHtml(line);
+
+  const highlighted = Prism.highlight(code, Prism.languages.python, 'python');
+  const rawLines = highlighted.split('\n');
+  const result = [];
+  let openTags = []; // Stack of opening span tags inherited from previous lines
+
+  for (const rawLine of rawLines) {
+    // Prepend any open tags from previous lines
+    const prefix = openTags.join('');
+
+    // Track opens/closes in this line to find what's still open at end
+    const newOpenTags = [...openTags];
+    const tagRegex = /<(\/?)span([^>]*)>/g;
+    let match;
+    while ((match = tagRegex.exec(rawLine)) !== null) {
+      if (match[1] === '/') {
+        newOpenTags.pop();
+      } else {
+        newOpenTags.push(`<span${match[2]}>`);
+      }
+    }
+
+    // Close any inherited+new open tags at end of this line
+    const suffix = '</span>'.repeat(newOpenTags.length);
+    result.push(prefix + rawLine + suffix);
+    openTags = newOpenTags;
+  }
+
+  return result;
 }
