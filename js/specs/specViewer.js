@@ -261,6 +261,9 @@ function displayVariable(item, container) {
   const table = document.createElement('table');
   table.className = 'variable-table';
 
+  // Reverse to show newest first
+  const forksReversed = [...item.forks].reverse();
+
   // Check if any fork has a source link
   const hasSourceLinks = getSourceInfoFn && forksReversed.some(fork => {
     const info = getSourceInfoFn();
@@ -294,9 +297,6 @@ function displayVariable(item, container) {
 
   // Body - show each fork's value (item.forks already only contains forks where value changed)
   const tbody = document.createElement('tbody');
-
-  // Reverse to show newest first
-  const forksReversed = [...item.forks].reverse();
 
   forksReversed.forEach(fork => {
     const forkValue = item.values[fork];
