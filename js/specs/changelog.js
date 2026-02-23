@@ -646,6 +646,17 @@ function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion
     return;
   }
 
+  // Check if any fork has different mainnet/minimal values
+  const hasDifferences = changedForks.some(fork => {
+    const val = currentItem?.values[fork] || baseItem?.values[fork];
+    if (val && typeof val === 'object' && !Array.isArray(val) && ('mainnet' in val || 'minimal' in val)) {
+      const mainnet = parseVarValue(val.mainnet);
+      const minimal = parseVarValue(val.minimal);
+      return String(mainnet.value) !== String(minimal.value);
+    }
+    return false;
+  });
+
   const box = document.createElement('div');
   box.className = 'fork-box';
 
@@ -656,14 +667,33 @@ function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion
   table.className = 'compare-variable-table';
 
   const thead = document.createElement('thead');
-  thead.innerHTML = `
-    <tr>
-      <th>Fork</th>
-      <th>Type</th>
-      <th class="compare-old">${escapeHtml(baseVersion)}</th>
-      <th class="compare-new">${escapeHtml(currentVersion)}</th>
-    </tr>
-  `;
+  if (hasDifferences) {
+    thead.innerHTML = `
+      <tr>
+        <th>Fork</th>
+        <th>Type</th>
+        <th class="compare-old" colspan="2">${escapeHtml(baseVersion)}</th>
+        <th class="compare-new" colspan="2">${escapeHtml(currentVersion)}</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th></th>
+        <th class="compare-old">Mainnet</th>
+        <th class="compare-old">Minimal</th>
+        <th class="compare-new">Mainnet</th>
+        <th class="compare-new">Minimal</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th>Fork</th>
+        <th>Type</th>
+        <th class="compare-old">${escapeHtml(baseVersion)}</th>
+        <th class="compare-new">${escapeHtml(currentVersion)}</th>
+      </tr>
+    `;
+  }
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
@@ -672,24 +702,45 @@ function renderVariableVersionDiff(currentItem, baseItem, container, baseVersion
     const currentVal = currentItem?.values[fork];
     const baseVal = baseItem?.values[fork];
 
-    const currentParsed = parseVarValue(currentVal);
-    const baseParsed = parseVarValue(baseVal);
-
-    const displayType = currentParsed.type || baseParsed.type;
-    const oldStr = baseParsed.value != null ? String(baseParsed.value) : '-';
-    const newStr = currentParsed.value != null ? String(currentParsed.value) : '-';
+    const displayType = (parseVarValue(currentVal).type || parseVarValue(baseVal).type) || 'N/A';
 
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>
-        <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
-          ${getForkDisplayName(fork)}
-        </span>
-      </td>
-      <td><code>${escapeHtml(displayType || 'N/A')}</code></td>
-      <td class="cell-changed cell-old"><code>${escapeHtml(oldStr)}</code></td>
-      <td class="cell-changed cell-new"><code>${escapeHtml(newStr)}</code></td>
-    `;
+
+    if (hasDifferences) {
+      const baseMainnet = parseVarValueForNetwork(baseVal, 'mainnet');
+      const baseMinimal = parseVarValueForNetwork(baseVal, 'minimal');
+      const curMainnet = parseVarValueForNetwork(currentVal, 'mainnet');
+      const curMinimal = parseVarValueForNetwork(currentVal, 'minimal');
+
+      row.innerHTML = `
+        <td>
+          <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
+            ${getForkDisplayName(fork)}
+          </span>
+        </td>
+        <td><code>${escapeHtml(displayType)}</code></td>
+        <td class="cell-changed cell-old"><code>${escapeHtml(baseMainnet)}</code></td>
+        <td class="cell-changed cell-old"><code>${escapeHtml(baseMinimal)}</code></td>
+        <td class="cell-changed cell-new"><code>${escapeHtml(curMainnet)}</code></td>
+        <td class="cell-changed cell-new"><code>${escapeHtml(curMinimal)}</code></td>
+      `;
+    } else {
+      const baseParsed = parseVarValue(baseVal);
+      const currentParsed = parseVarValue(currentVal);
+      const oldStr = baseParsed.value != null ? String(baseParsed.value) : '-';
+      const newStr = currentParsed.value != null ? String(currentParsed.value) : '-';
+
+      row.innerHTML = `
+        <td>
+          <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
+            ${getForkDisplayName(fork)}
+          </span>
+        </td>
+        <td><code>${escapeHtml(displayType)}</code></td>
+        <td class="cell-changed cell-old"><code>${escapeHtml(oldStr)}</code></td>
+        <td class="cell-changed cell-new"><code>${escapeHtml(newStr)}</code></td>
+      `;
+    }
     tbody.appendChild(row);
   });
 
@@ -715,4 +766,22 @@ function parseVarValue(value) {
     return { type: value[0] || '', value: value[1] !== undefined ? value[1] : '' };
   }
   return { type: '', value: value || '' };
+}
+
+/**
+ * Extract a specific network's value string from a variable value
+ */
+function parseVarValueForNetwork(value, network) {
+  if (value == null) return '-';
+
+  if (typeof value === 'object' && !Array.isArray(value) && ('mainnet' in value || 'minimal' in value)) {
+    const networkVal = value[network];
+    if (networkVal == null) return '-';
+    const parsed = parseVarValue(networkVal);
+    return parsed.value != null ? String(parsed.value) : '-';
+  }
+
+  // No network split — same value for both
+  const parsed = parseVarValue(value);
+  return parsed.value != null ? String(parsed.value) : '-';
 }

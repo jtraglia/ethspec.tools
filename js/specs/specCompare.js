@@ -789,15 +789,46 @@ function renderVariableComparison(container, oldItem, newItem, oldVer, newVer, o
   const table = document.createElement('table');
   table.className = 'compare-variable-table';
 
+  // Check if any fork has different mainnet/minimal values
+  const hasDifferences = relevantForks.some(fork => {
+    const val = (newItem ? resolveVariableValueAtFork(newItem, fork) : null)
+             || (oldItem ? resolveVariableValueAtFork(oldItem, fork) : null);
+    if (val && typeof val === 'object' && !Array.isArray(val) && ('mainnet' in val || 'minimal' in val)) {
+      const mainnet = parseVariableValue(val.mainnet);
+      const minimal = parseVariableValue(val.minimal);
+      return String(mainnet.value) !== String(minimal.value);
+    }
+    return false;
+  });
+
   const thead = document.createElement('thead');
-  thead.innerHTML = `
-    <tr>
-      <th>Fork</th>
-      <th>Type</th>
-      <th class="compare-old">${escapeHtml(oldVer)}</th>
-      <th class="compare-new">${escapeHtml(newVer)}</th>
-    </tr>
-  `;
+  if (hasDifferences) {
+    thead.innerHTML = `
+      <tr>
+        <th>Fork</th>
+        <th>Type</th>
+        <th class="compare-old" colspan="2">${escapeHtml(oldVer)}</th>
+        <th class="compare-new" colspan="2">${escapeHtml(newVer)}</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th></th>
+        <th class="compare-old">Mainnet</th>
+        <th class="compare-old">Minimal</th>
+        <th class="compare-new">Mainnet</th>
+        <th class="compare-new">Minimal</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th>Fork</th>
+        <th>Type</th>
+        <th class="compare-old">${escapeHtml(oldVer)}</th>
+        <th class="compare-new">${escapeHtml(newVer)}</th>
+      </tr>
+    `;
+  }
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
@@ -810,24 +841,47 @@ function renderVariableComparison(container, oldItem, newItem, oldVer, newVer, o
 
     if (oldValue === null && newValue === null) return;
 
-    const oldParsed = oldValue ? parseVariableValue(oldValue.mainnet || oldValue) : { type: '', value: '' };
-    const newParsed = newValue ? parseVariableValue(newValue.mainnet || newValue) : { type: '', value: '' };
-
-    const oldValStr = String(oldParsed.value);
-    const newValStr = String(newParsed.value);
-    const changed = oldValStr !== newValStr;
-
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>
-        <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
-          ${getForkDisplayName(fork)}
-        </span>
-      </td>
-      <td><code>${escapeHtml(newParsed.type || oldParsed.type || 'N/A')}</code></td>
-      <td class="${changed ? 'cell-changed cell-old' : ''}"><code>${escapeHtml(oldValStr)}</code></td>
-      <td class="${changed ? 'cell-changed cell-new' : ''}"><code>${escapeHtml(newValStr)}</code></td>
-    `;
+
+    if (hasDifferences) {
+      const oldMainnet = getNetworkValueStr(oldValue, 'mainnet');
+      const oldMinimal = getNetworkValueStr(oldValue, 'minimal');
+      const newMainnet = getNetworkValueStr(newValue, 'mainnet');
+      const newMinimal = getNetworkValueStr(newValue, 'minimal');
+      const mainnetChanged = oldMainnet !== newMainnet;
+      const minimalChanged = oldMinimal !== newMinimal;
+      const displayType = getDisplayType(newValue) || getDisplayType(oldValue) || 'N/A';
+
+      row.innerHTML = `
+        <td>
+          <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
+            ${getForkDisplayName(fork)}
+          </span>
+        </td>
+        <td><code>${escapeHtml(displayType)}</code></td>
+        <td class="${mainnetChanged ? 'cell-changed cell-old' : ''}"><code>${escapeHtml(oldMainnet)}</code></td>
+        <td class="${minimalChanged ? 'cell-changed cell-old' : ''}"><code>${escapeHtml(oldMinimal)}</code></td>
+        <td class="${mainnetChanged ? 'cell-changed cell-new' : ''}"><code>${escapeHtml(newMainnet)}</code></td>
+        <td class="${minimalChanged ? 'cell-changed cell-new' : ''}"><code>${escapeHtml(newMinimal)}</code></td>
+      `;
+    } else {
+      const oldParsed = oldValue ? parseVariableValue(getNetworkOrRaw(oldValue)) : { type: '', value: '' };
+      const newParsed = newValue ? parseVariableValue(getNetworkOrRaw(newValue)) : { type: '', value: '' };
+      const oldValStr = String(oldParsed.value);
+      const newValStr = String(newParsed.value);
+      const changed = oldValStr !== newValStr;
+
+      row.innerHTML = `
+        <td>
+          <span class="fork-badge" style="background-color: ${getForkColor(fork)}">
+            ${getForkDisplayName(fork)}
+          </span>
+        </td>
+        <td><code>${escapeHtml(newParsed.type || oldParsed.type || 'N/A')}</code></td>
+        <td class="${changed ? 'cell-changed cell-old' : ''}"><code>${escapeHtml(oldValStr)}</code></td>
+        <td class="${changed ? 'cell-changed cell-new' : ''}"><code>${escapeHtml(newValStr)}</code></td>
+      `;
+    }
     tbody.appendChild(row);
   });
 
@@ -855,6 +909,43 @@ function resolveVariableValueAtFork(item, fork) {
   }
 
   return null;
+}
+
+/**
+ * Get a specific network's value string from a variable value
+ */
+function getNetworkValueStr(value, network) {
+  if (value == null) return '-';
+  if (typeof value === 'object' && !Array.isArray(value) && ('mainnet' in value || 'minimal' in value)) {
+    const networkVal = value[network];
+    if (networkVal == null) return '-';
+    const parsed = parseVariableValue(networkVal);
+    return parsed.value != null ? String(parsed.value) : '-';
+  }
+  const parsed = parseVariableValue(value);
+  return parsed.value != null ? String(parsed.value) : '-';
+}
+
+/**
+ * Get the mainnet (or raw) value from a variable for simple parsing
+ */
+function getNetworkOrRaw(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value) && ('mainnet' in value || 'minimal' in value)) {
+    return value.mainnet !== undefined ? value.mainnet : value.minimal;
+  }
+  return value;
+}
+
+/**
+ * Get display type from a variable value
+ */
+function getDisplayType(value) {
+  if (value == null) return '';
+  if (typeof value === 'object' && !Array.isArray(value) && ('mainnet' in value || 'minimal' in value)) {
+    const primary = value.mainnet !== undefined ? value.mainnet : value.minimal;
+    return parseVariableValue(primary).type;
+  }
+  return parseVariableValue(value).type;
 }
 
 /**
