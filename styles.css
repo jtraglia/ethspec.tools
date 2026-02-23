@@ -689,9 +689,9 @@ input:checked + .toggle-slider:before {
   display: none !important;
 }
 
-/* Source link in variable table rows */
+/* Source link column in variable table */
 .variable-table .source-link {
-  margin-left: 0.5rem;
+  white-space: nowrap;
 }
 
 .spec-content {

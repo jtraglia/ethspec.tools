@@ -78,11 +78,17 @@ function createUsedBySection(itemName) {
 function getItemSourceLocation(itemName, fork, info) {
   if (!info || !info.sourceMap || !info.sourceMap.items) return null;
 
-  const itemEntry = info.sourceMap.items[itemName];
-  if (!itemEntry) return null;
-
+  const items = info.sourceMap.items;
   const forkKey = fork.toLowerCase();
-  const loc = itemEntry[forkKey];
+
+  // Try exact name first, then fork-suffixed name (e.g., ITEM_NAME_ELECTRA)
+  // Pyspec merges fork-specific constants into a base name, but the markdown
+  // defines them with fork suffixes.
+  let loc = items[itemName]?.[forkKey];
+  if (!loc) {
+    const suffixedName = `${itemName}_${fork}`;
+    loc = items[suffixedName]?.[forkKey];
+  }
   if (!loc) return null;
 
   // Determine the git ref for the URL
@@ -255,8 +261,15 @@ function displayVariable(item, container) {
   const table = document.createElement('table');
   table.className = 'variable-table';
 
+  // Check if any fork has a source link
+  const hasSourceLinks = getSourceInfoFn && forksReversed.some(fork => {
+    const info = getSourceInfoFn();
+    return getItemSourceLocation(item.name, fork, info) !== null;
+  });
+
   // Header - show separate columns only if values differ
   const thead = document.createElement('thead');
+  const linkHeader = hasSourceLinks ? '<th>Link</th>' : '';
   if (hasDifferences) {
     thead.innerHTML = `
       <tr>
@@ -264,6 +277,7 @@ function displayVariable(item, container) {
         <th>Type</th>
         <th>Mainnet</th>
         <th>Minimal</th>
+        ${linkHeader}
       </tr>
     `;
   } else {
@@ -272,6 +286,7 @@ function displayVariable(item, container) {
         <th>Fork</th>
         <th>Type</th>
         <th>Value</th>
+        ${linkHeader}
       </tr>
     `;
   }
@@ -326,11 +341,14 @@ function displayVariable(item, container) {
       `;
     }
 
-    // Add source link to fork cell
-    const sourceLinkEl = createSourceLinkElement(item.name, fork);
-    if (sourceLinkEl) {
-      const forkCell = row.querySelector('td:first-child');
-      forkCell.appendChild(sourceLinkEl);
+    // Add source link column
+    if (hasSourceLinks) {
+      const linkCell = document.createElement('td');
+      const sourceLinkEl = createSourceLinkElement(item.name, fork);
+      if (sourceLinkEl) {
+        linkCell.appendChild(sourceLinkEl);
+      }
+      row.appendChild(linkCell);
     }
 
     tbody.appendChild(row);
