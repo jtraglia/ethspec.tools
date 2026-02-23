@@ -685,7 +685,10 @@ function displayCode(item, container) {
       table.appendChild(row);
     });
 
-    content.appendChild(table);
+    const diffContainer = document.createElement('div');
+    diffContainer.className = 'diff-container';
+    diffContainer.appendChild(table);
+    content.appendChild(diffContainer);
 
     // Toggle functionality
     header.addEventListener('click', () => {
