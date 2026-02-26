@@ -20,6 +20,7 @@ const state = {
   activeForkFilter: null,
   activeTypeFilter: null,
   searchTerm: '',
+  fileFilter: '',
   currentVersion: 'nightly',
   availableVersions: ['nightly'],
   initialLoadComplete: false,
@@ -111,7 +112,7 @@ function applyFilters() {
   if (isChangelogActive()) {
     applyChangelogToTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
   } else {
-    filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm);
+    filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm, state.fileFilter);
   }
 }
 
@@ -121,6 +122,53 @@ function applyFilters() {
 export function applySearch(searchTerm) {
   state.searchTerm = searchTerm;
   applyFilters();
+}
+
+/**
+ * Build the file filter datalist from sourceMap
+ */
+function buildFileFilter() {
+  const datalist = document.getElementById('fileFilterList');
+  datalist.innerHTML = '';
+
+  if (!state.sourceMap || !state.sourceMap.items) return;
+
+  const fileSet = new Set();
+  for (const itemName of Object.keys(state.sourceMap.items)) {
+    const forkMap = state.sourceMap.items[itemName];
+    for (const fork of Object.keys(forkMap)) {
+      const filePath = forkMap[fork];
+      if (filePath) fileSet.add(filePath);
+    }
+  }
+
+  Array.from(fileSet).sort().forEach(file => {
+    const option = document.createElement('option');
+    option.value = file;
+    datalist.appendChild(option);
+  });
+}
+
+/**
+ * Initialize file filter input event handlers
+ */
+function initFileFilter() {
+  const input = document.getElementById('fileFilterInput');
+  const clearBtn = document.getElementById('fileFilterClear');
+
+  input.addEventListener('input', () => {
+    const value = input.value.trim().toLowerCase();
+    state.fileFilter = value;
+    clearBtn.classList.toggle('hidden', !value);
+    applyFilters();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    state.fileFilter = '';
+    clearBtn.classList.add('hidden');
+    applyFilters();
+  });
 }
 
 /**
@@ -361,6 +409,7 @@ async function loadVersionData(version) {
   const savedForkFilter = state.activeForkFilter;
   const savedTypeFilter = state.activeTypeFilter;
   const savedSearchTerm = state.searchTerm;
+  const savedFileFilter = state.fileFilter;
 
   try {
     const response = await fetch(`pyspec/${version}/pyspec.json`);
@@ -388,6 +437,7 @@ async function loadVersionData(version) {
     state.activeForkFilter = savedForkFilter;
     state.activeTypeFilter = savedTypeFilter;
     state.searchTerm = savedSearchTerm;
+    state.fileFilter = savedFileFilter;
 
     // Re-apply active states to buttons
     if (savedForkFilter) {
@@ -400,7 +450,8 @@ async function loadVersionData(version) {
     }
 
     setOnItemSelectCallback(onItemSelect);
-    buildTree(state.data, state.forks);
+    buildTree(state.data, state.forks, state.sourceMap);
+    buildFileFilter();
 
     // Initialize changelog button
     initChangelog(() => ({
@@ -410,7 +461,7 @@ async function loadVersionData(version) {
       availableVersions: state.availableVersions
     }), applyFilters);
 
-    if (savedForkFilter || savedTypeFilter || savedSearchTerm) {
+    if (savedForkFilter || savedTypeFilter || savedSearchTerm || savedFileFilter) {
       applyFilters();
     }
 
@@ -496,6 +547,7 @@ export async function init(savedVersion, searchTerm = '') {
 
   // Initialize UI
   initVersionSelector();
+  initFileFilter();
   initReferenceClickHandler();
 
   // Discover available versions

@@ -295,7 +295,7 @@ function createItemNode(item) {
 /**
  * Build the navigation tree
  */
-export function buildTree(data, forks) {
+export function buildTree(data, forks, sourceMap) {
   const container = document.getElementById('specsTree');
   container.innerHTML = '';
   treeNodes = [];
@@ -316,7 +316,19 @@ export function buildTree(data, forks) {
 
     // Add items directly under category
     itemList.forEach(item => {
-      categoryChildren.appendChild(createItemNode(item));
+      const node = createItemNode(item);
+
+      // Store source file paths from sourceMap
+      if (sourceMap && sourceMap.items && sourceMap.items[item.name]) {
+        const fileSet = new Set();
+        for (const fork of Object.keys(sourceMap.items[item.name])) {
+          const filePath = sourceMap.items[item.name][fork];
+          if (filePath) fileSet.add(filePath);
+        }
+        node.dataset.files = Array.from(fileSet).join(' ');
+      }
+
+      categoryChildren.appendChild(node);
     });
 
     categoryNode.dataset.category = category;
@@ -330,7 +342,7 @@ export function buildTree(data, forks) {
 /**
  * Filter the tree based on fork, type, and search term
  */
-export function filterTree(forkFilter, typeFilter, searchTerm) {
+export function filterTree(forkFilter, typeFilter, searchTerm, fileFilter) {
   const container = document.getElementById('specsTree');
   const categoryNodes = container.querySelectorAll(':scope > .tree-node');
 
@@ -358,7 +370,14 @@ export function filterTree(forkFilter, typeFilter, searchTerm) {
       // Search filter
       const matchesSearch = !searchTerm || name.includes(searchTerm);
 
-      if (matchesFork && matchesSearch) {
+      // File filter - check if any source file contains the filter string
+      let matchesFile = true;
+      if (fileFilter) {
+        const files = itemNode.dataset.files || '';
+        matchesFile = files.toLowerCase().includes(fileFilter);
+      }
+
+      if (matchesFork && matchesSearch && matchesFile) {
         itemNode.classList.remove('tree-filtered');
         visibleItemCount++;
       } else {
@@ -374,10 +393,10 @@ export function filterTree(forkFilter, typeFilter, searchTerm) {
       const icon = categoryNode.querySelector('.tree-icon');
 
       // Auto-expand category if searching or if type filter matches this category
-      if (searchTerm || (typeFilter && category === typeFilter)) {
+      if (searchTerm || fileFilter || (typeFilter && category === typeFilter)) {
         if (children) children.classList.remove('collapsed');
         if (icon) icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
-      } else if (!typeFilter && !searchTerm) {
+      } else if (!typeFilter && !searchTerm && !fileFilter) {
         // Collapse when filters are cleared
         if (children) children.classList.add('collapsed');
         if (icon) icon.innerHTML = '<i class="fas fa-chevron-right"></i>';

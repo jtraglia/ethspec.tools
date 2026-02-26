@@ -330,7 +330,8 @@ input:checked + .toggle-slider:before {
 .preset-filters,
 .fork-filters,
 .type-filters,
-.runner-filters {
+.runner-filters,
+.file-filter {
   padding: 0.4rem 1rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -350,8 +351,48 @@ input:checked + .toggle-slider:before {
 .preset-filters::-webkit-scrollbar,
 .fork-filters::-webkit-scrollbar,
 .type-filters::-webkit-scrollbar,
-.runner-filters::-webkit-scrollbar {
+.runner-filters::-webkit-scrollbar,
+.file-filter::-webkit-scrollbar {
   display: none;
+}
+
+/* File filter input */
+.file-filter {
+  position: relative;
+}
+
+.file-filter input {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.8rem;
+  box-sizing: border-box;
+}
+
+.file-filter input:focus {
+  outline: none;
+  border-color: var(--link-color);
+}
+
+.file-filter-clear {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Filter buttons */
