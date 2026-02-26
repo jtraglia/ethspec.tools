@@ -125,12 +125,15 @@ export function applySearch(searchTerm) {
 }
 
 /**
- * Build the file filter datalist from sourceMap
+ * All unique file paths from the source map (sorted, excluding specs/_features/)
+ */
+let fileFilterFiles = [];
+
+/**
+ * Build the file filter list from sourceMap
  */
 function buildFileFilter() {
-  const datalist = document.getElementById('fileFilterList');
-  datalist.innerHTML = '';
-
+  fileFilterFiles = [];
   if (!state.sourceMap || !state.sourceMap.items) return;
 
   const fileSet = new Set();
@@ -138,15 +141,68 @@ function buildFileFilter() {
     const forkMap = state.sourceMap.items[itemName];
     for (const fork of Object.keys(forkMap)) {
       const loc = forkMap[fork];
-      if (loc && loc.file) fileSet.add(loc.file);
+      if (loc && loc.file && !loc.file.startsWith('specs/_features/')) {
+        fileSet.add(loc.file);
+      }
     }
   }
+  fileFilterFiles = Array.from(fileSet).sort();
+}
 
-  Array.from(fileSet).sort().forEach(file => {
-    const option = document.createElement('option');
-    option.value = file;
-    datalist.appendChild(option);
+/**
+ * Get files matching a query string
+ */
+function getMatchingFiles(query) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  return fileFilterFiles.filter(f => f.toLowerCase().includes(q));
+}
+
+/**
+ * Compute the longest common prefix of an array of strings
+ */
+function longestCommonPrefix(strings) {
+  if (strings.length === 0) return '';
+  let prefix = strings[0];
+  for (let i = 1; i < strings.length; i++) {
+    while (strings[i].indexOf(prefix) !== 0) {
+      prefix = prefix.slice(0, -1);
+      if (!prefix) return '';
+    }
+  }
+  return prefix;
+}
+
+/**
+ * Show/hide the file filter dropdown with matching files
+ */
+function updateFileDropdown(query) {
+  const dropdown = document.getElementById('fileFilterDropdown');
+  const matches = getMatchingFiles(query);
+
+  dropdown.innerHTML = '';
+  if (!query || matches.length === 0) {
+    dropdown.classList.add('hidden');
+    return;
+  }
+
+  matches.forEach(file => {
+    const div = document.createElement('div');
+    div.className = 'file-filter-option';
+    div.textContent = file;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // prevent blur before click fires
+      const input = document.getElementById('fileFilterInput');
+      input.value = file;
+      state.fileFilter = file.toLowerCase();
+      dropdown.classList.add('hidden');
+      document.getElementById('fileFilterClear').classList.remove('hidden');
+      applyFilters();
+    });
+    dropdown.appendChild(div);
   });
+
+  dropdown.classList.remove('hidden');
 }
 
 /**
@@ -155,18 +211,53 @@ function buildFileFilter() {
 function initFileFilter() {
   const input = document.getElementById('fileFilterInput');
   const clearBtn = document.getElementById('fileFilterClear');
+  const dropdown = document.getElementById('fileFilterDropdown');
 
   input.addEventListener('input', () => {
-    const value = input.value.trim().toLowerCase();
-    state.fileFilter = value;
+    const value = input.value.trim();
+    state.fileFilter = value.toLowerCase();
     clearBtn.classList.toggle('hidden', !value);
+    updateFileDropdown(value);
     applyFilters();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      const value = input.value.trim();
+      if (!value) return;
+      const matches = getMatchingFiles(value);
+      if (matches.length === 0) return;
+
+      e.preventDefault();
+      if (matches.length === 1) {
+        input.value = matches[0];
+      } else {
+        const lcp = longestCommonPrefix(matches);
+        if (lcp.length > value.length) {
+          input.value = lcp;
+        }
+      }
+      state.fileFilter = input.value.toLowerCase();
+      clearBtn.classList.toggle('hidden', !input.value);
+      updateFileDropdown(input.value);
+      applyFilters();
+    }
+  });
+
+  input.addEventListener('focus', () => {
+    const value = input.value.trim();
+    if (value) updateFileDropdown(value);
+  });
+
+  input.addEventListener('blur', () => {
+    dropdown.classList.add('hidden');
   });
 
   clearBtn.addEventListener('click', () => {
     input.value = '';
     state.fileFilter = '';
     clearBtn.classList.add('hidden');
+    dropdown.classList.add('hidden');
     applyFilters();
   });
 }

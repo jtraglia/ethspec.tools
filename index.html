@@ -84,11 +84,12 @@
         <div class="fork-filters" id="specsForkFilters"></div>
         <div class="type-filters" id="specsTypeFilters"></div>
         <div class="file-filter" id="specsFileFilter">
-          <input type="text" id="fileFilterInput" list="fileFilterList"
-                 placeholder="Filter by file..." aria-label="Filter by source file">
-          <datalist id="fileFilterList"></datalist>
+          <input type="text" id="fileFilterInput"
+                 placeholder="Filter by file..." aria-label="Filter by source file"
+                 autocomplete="off">
           <button id="fileFilterClear" class="file-filter-clear hidden"
                   aria-label="Clear file filter">&times;</button>
+          <div id="fileFilterDropdown" class="file-filter-dropdown hidden"></div>
         </div>
         <div class="tree-container" id="specsTree"></div>
       </div>
