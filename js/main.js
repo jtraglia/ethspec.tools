@@ -325,6 +325,20 @@ async function init() {
     }
   }
 
+  // Arrow-key shortcuts for browser back/forward
+  window.addEventListener('keydown', (e) => {
+    // Skip when typing in inputs or textareas
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (document.activeElement?.isContentEditable) return;
+
+    if (e.key === 'ArrowLeft') {
+      history.back();
+    } else if (e.key === 'ArrowRight') {
+      history.forward();
+    }
+  });
+
   // Handle browser back/forward navigation
   window.addEventListener('popstate', () => {
     const { mode: newMode, path: newPath } = parseHash();
