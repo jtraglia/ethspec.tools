@@ -184,7 +184,12 @@ function buildFileFilter() {
       }
     }
   }
-  fileFilterFiles = Array.from(fileSet).sort();
+  fileFilterFiles = Array.from(fileSet).sort((a, b) => {
+    const aPhase0 = a.startsWith('phase0/');
+    const bPhase0 = b.startsWith('phase0/');
+    if (aPhase0 !== bPhase0) return aPhase0 ? -1 : 1;
+    return a.localeCompare(b);
+  });
 }
 
 /**
