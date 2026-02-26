@@ -343,6 +343,50 @@ export function buildTree(data, forks, sourceMap) {
 }
 
 /**
+ * Compute which forks, categories, and files are available given the current filters.
+ * Each set ignores its own filter dimension so users can see productive alternatives.
+ */
+export function getFilterableCounts(forkFilter, typeFilter, searchTerm, fileFilter) {
+  const container = document.getElementById('specsTree');
+  const itemNodes = container.querySelectorAll('.tree-node[data-name]');
+
+  const availableForks = new Set();
+  const availableCategories = new Set();
+  const availableFiles = new Set();
+
+  itemNodes.forEach(node => {
+    const name = node.dataset.name.toLowerCase();
+    const category = node.dataset.category;
+    const itemForks = node.dataset.forks.split(' ');
+    const files = node.dataset.files || '';
+
+    const matchesSearch = !searchTerm || name.includes(searchTerm);
+    const matchesFork = !forkFilter || itemForks.includes(forkFilter);
+    const matchesType = !typeFilter || category === typeFilter;
+    const matchesFile = !fileFilter || files.toLowerCase().includes(fileFilter);
+
+    // Available forks: items matching search + file + type (fork ignored)
+    if (matchesSearch && matchesFile && matchesType) {
+      itemForks.forEach(f => availableForks.add(f));
+    }
+
+    // Available categories: items matching search + file + fork (type ignored)
+    if (matchesSearch && matchesFile && matchesFork) {
+      availableCategories.add(category);
+    }
+
+    // Available files: items matching search + fork + type (file ignored)
+    if (matchesSearch && matchesFork && matchesType) {
+      if (files) {
+        files.split(' ').forEach(f => availableFiles.add(f));
+      }
+    }
+  });
+
+  return { availableForks, availableCategories, availableFiles };
+}
+
+/**
  * Filter the tree based on fork, type, and search term
  */
 export function filterTree(forkFilter, typeFilter, searchTerm, fileFilter) {

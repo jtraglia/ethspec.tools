@@ -3,7 +3,7 @@
  * Handles initialization and state management for the specs viewer
  */
 
-import { buildTree, filterTree, setOnItemSelectCallback } from './tree.js';
+import { buildTree, filterTree, getFilterableCounts, setOnItemSelectCallback } from './tree.js';
 import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurrentVersion, setGetSourceInfo } from './specViewer.js';
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
 import { initReferenceClickHandler } from './references.js';
@@ -106,6 +106,38 @@ function buildTypeFilters() {
 }
 
 /**
+ * Update fork/type button disabled states and file dropdown based on current filters
+ */
+function updateFilterButtonStates() {
+  const { availableForks, availableCategories, availableFiles } = getFilterableCounts(
+    state.activeForkFilter, state.activeTypeFilter, state.searchTerm, state.fileFilter
+  );
+
+  // Fork buttons: disable if fork yields zero results (never disable the active filter)
+  document.querySelectorAll('#specsForkFilters .fork-filter-btn').forEach(btn => {
+    const fork = btn.dataset.fork;
+    if (fork === state.activeForkFilter || availableForks.has(fork)) {
+      btn.classList.remove('disabled');
+    } else {
+      btn.classList.add('disabled');
+    }
+  });
+
+  // Type buttons: disable if category yields zero results (never disable the active filter)
+  document.querySelectorAll('#specsTypeFilters .type-filter-btn').forEach(btn => {
+    const type = btn.dataset.type;
+    if (type === state.activeTypeFilter || availableCategories.has(type)) {
+      btn.classList.remove('disabled');
+    } else {
+      btn.classList.add('disabled');
+    }
+  });
+
+  // Restrict file dropdown to files that match current non-file filters
+  currentAvailableFiles = availableFiles;
+}
+
+/**
  * Apply all filters to the tree
  */
 function applyFilters() {
@@ -114,6 +146,7 @@ function applyFilters() {
   } else {
     filterTree(state.activeForkFilter, state.activeTypeFilter, state.searchTerm, state.fileFilter);
   }
+  updateFilterButtonStates();
 }
 
 /**
@@ -128,6 +161,9 @@ export function applySearch(searchTerm) {
  * All unique file paths from the source map (sorted, excluding specs/_features/)
  */
 let fileFilterFiles = [];
+
+// Files available given current non-file filters (null = no restriction)
+let currentAvailableFiles = null;
 
 /**
  * Build the file filter list from sourceMap
@@ -155,9 +191,13 @@ function buildFileFilter() {
  * Get files matching a query string (empty query returns all)
  */
 function getMatchingFiles(query) {
-  if (!query) return fileFilterFiles;
+  let files = fileFilterFiles;
+  if (currentAvailableFiles) {
+    files = files.filter(f => currentAvailableFiles.has(f));
+  }
+  if (!query) return files;
   const q = query.toLowerCase();
-  return fileFilterFiles.filter(f => f.toLowerCase().includes(q));
+  return files.filter(f => f.toLowerCase().includes(q));
 }
 
 /**
