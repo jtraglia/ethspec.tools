@@ -359,6 +359,7 @@ input:checked + .toggle-slider:before {
 /* File filter input */
 .file-filter {
   position: relative;
+  overflow: visible;
 }
 
 .file-filter input {
