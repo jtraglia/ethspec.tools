@@ -330,8 +330,7 @@ input:checked + .toggle-slider:before {
 .preset-filters,
 .fork-filters,
 .type-filters,
-.runner-filters,
-.file-filter {
+.runner-filters {
   padding: 0.4rem 1rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -351,15 +350,22 @@ input:checked + .toggle-slider:before {
 .preset-filters::-webkit-scrollbar,
 .fork-filters::-webkit-scrollbar,
 .type-filters::-webkit-scrollbar,
-.runner-filters::-webkit-scrollbar,
-.file-filter::-webkit-scrollbar {
+.runner-filters::-webkit-scrollbar {
   display: none;
 }
 
 /* File filter input */
 .file-filter {
   position: relative;
-  overflow: visible;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--sidebar-bg);
+  height: 52px;
+  min-height: 52px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .file-filter input {
@@ -369,8 +375,7 @@ input:checked + .toggle-slider:before {
   border-radius: 4px;
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-size: 0.8rem;
-  box-sizing: border-box;
+  font-size: 0.9rem;
 }
 
 .file-filter input:focus {

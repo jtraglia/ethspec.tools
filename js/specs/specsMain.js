@@ -142,7 +142,9 @@ function buildFileFilter() {
     for (const fork of Object.keys(forkMap)) {
       const loc = forkMap[fork];
       if (loc && loc.file && !loc.file.startsWith('specs/_features/')) {
-        fileSet.add(loc.file);
+        // Strip leading "specs/" since all paths share it
+        const display = loc.file.startsWith('specs/') ? loc.file.slice(6) : loc.file;
+        fileSet.add(display);
       }
     }
   }
@@ -150,10 +152,10 @@ function buildFileFilter() {
 }
 
 /**
- * Get files matching a query string
+ * Get files matching a query string (empty query returns all)
  */
 function getMatchingFiles(query) {
-  if (!query) return [];
+  if (!query) return fileFilterFiles;
   const q = query.toLowerCase();
   return fileFilterFiles.filter(f => f.toLowerCase().includes(q));
 }
@@ -181,7 +183,7 @@ function updateFileDropdown(query) {
   const matches = getMatchingFiles(query);
 
   dropdown.innerHTML = '';
-  if (!query || matches.length === 0) {
+  if (matches.length === 0 || matches.length === 1) {
     dropdown.classList.add('hidden');
     return;
   }
@@ -245,8 +247,7 @@ function initFileFilter() {
   });
 
   input.addEventListener('focus', () => {
-    const value = input.value.trim();
-    if (value) updateFileDropdown(value);
+    updateFileDropdown(input.value.trim());
   });
 
   input.addEventListener('blur', () => {
