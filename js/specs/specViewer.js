@@ -136,7 +136,7 @@ function createSourceLinkElement(itemName, fork) {
 /**
  * Display a specification item
  */
-export function displaySpec(item, data) {
+export function displaySpec(item, data, pushHistory = false) {
   currentItem = item;
 
   const title = document.getElementById('specTitle');
@@ -156,7 +156,11 @@ export function displaySpec(item, data) {
   // Update URL hash for direct linking (include version)
   const version = getCurrentVersionFn ? getCurrentVersionFn() : 'nightly';
   const itemId = `specs/${version}/${item.category}-${item.name}`;
-  history.replaceState(null, '', `#${itemId}`);
+  if (pushHistory) {
+    history.pushState(null, '', `#${itemId}`);
+  } else {
+    history.replaceState(null, '', `#${itemId}`);
+  }
 
   // Manage Code/Diff toggle in header
   const header = document.querySelector('.spec-header');

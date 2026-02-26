@@ -141,8 +141,8 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
     addToHistory(item.name, preferredFork);
   }
 
-  // Display the spec
-  displaySpec(item, state.data);
+  // Display the spec (push browser history for user-initiated navigation)
+  displaySpec(item, state.data, addHistory);
 
   // Open the preferred fork if specified
   if (preferredFork) {
@@ -193,7 +193,7 @@ setGetSourceInfo(getSourceInfo);
 /**
  * Select an item by name
  */
-function selectItemByName(itemName, preferredFork) {
+function selectItemByName(itemName, preferredFork, addHistory = true) {
   const treeNodes = document.querySelectorAll('#specsTree .tree-node[data-name]');
   for (const node of treeNodes) {
     const name = node.dataset.name;
@@ -216,7 +216,7 @@ function selectItemByName(itemName, preferredFork) {
 
         const itemData = node._itemData;
         if (itemData) {
-          onItemSelect({ ...itemData, element: label }, true, preferredFork);
+          onItemSelect({ ...itemData, element: label }, addHistory, preferredFork);
         } else {
           label.click();
         }
@@ -483,7 +483,7 @@ function initNavigation() {
  * Handle deep link
  * Format: version/category-itemName or version/category-itemName-FORK
  */
-export function handleDeepLink(path) {
+export function handleDeepLink(path, addHistory = true) {
   if (!path) return;
 
   let version = null;
@@ -518,11 +518,11 @@ export function handleDeepLink(path) {
     const select = document.getElementById('versionSelect');
     if (select) select.value = version;
     loadVersionData(version).then(() => {
-      selectItemByName(itemName, preferredFork);
+      selectItemByName(itemName, preferredFork, addHistory);
     });
   } else {
     setTimeout(() => {
-      selectItemByName(itemName, preferredFork);
+      selectItemByName(itemName, preferredFork, addHistory);
     }, 100);
   }
 }

@@ -313,17 +313,27 @@ async function init() {
   // Initialize the appropriate mode
   if (mode === 'specs') {
     await initSpecsMode();
-    // Handle deep link if present
+    // Handle deep link if present (don't push history for initial load)
     if (path && state.specsModule.handleDeepLink) {
-      state.specsModule.handleDeepLink(path);
+      state.specsModule.handleDeepLink(path, false);
     }
   } else {
     await initTestsMode();
-    // Handle deep link if present
+    // Handle deep link if present (don't push history for initial load)
     if (path && state.testsModule.handleDeepLink) {
-      state.testsModule.handleDeepLink(path);
+      state.testsModule.handleDeepLink(path, false);
     }
   }
+
+  // Handle browser back/forward navigation
+  window.addEventListener('popstate', () => {
+    const { mode: newMode, path: newPath } = parseHash();
+    if (newMode === 'specs' && newPath && state.specsModule.handleDeepLink) {
+      state.specsModule.handleDeepLink(newPath, false);
+    } else if (newMode === 'tests' && newPath && state.testsModule.handleDeepLink) {
+      state.testsModule.handleDeepLink(newPath, false);
+    }
+  });
 }
 
 // Export for use by mode modules
