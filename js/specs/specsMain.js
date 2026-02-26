@@ -220,6 +220,34 @@ function longestCommonPrefix(strings) {
   return prefix;
 }
 
+// Currently highlighted index in the file dropdown (-1 = none)
+let fileDropdownIndex = -1;
+
+/**
+ * Update the active class on dropdown options to reflect fileDropdownIndex
+ */
+function updateDropdownHighlight() {
+  const options = document.getElementById('fileFilterDropdown').querySelectorAll('.file-filter-option');
+  options.forEach((opt, i) => opt.classList.toggle('active', i === fileDropdownIndex));
+  if (fileDropdownIndex >= 0 && options[fileDropdownIndex]) {
+    options[fileDropdownIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+/**
+ * Select the file at the current dropdown index
+ */
+function selectDropdownFile(file) {
+  const input = document.getElementById('fileFilterInput');
+  const dropdown = document.getElementById('fileFilterDropdown');
+  input.value = file;
+  state.fileFilter = file.toLowerCase();
+  dropdown.classList.add('hidden');
+  fileDropdownIndex = -1;
+  document.getElementById('fileFilterClear').classList.remove('hidden');
+  applyFilters();
+}
+
 /**
  * Show/hide the file filter dropdown with matching files
  */
@@ -228,6 +256,7 @@ function updateFileDropdown(query) {
   const matches = getMatchingFiles(query);
 
   dropdown.innerHTML = '';
+  fileDropdownIndex = -1;
   const exactMatch = query && matches.some(f => f.toLowerCase() === query.toLowerCase());
   if (matches.length === 0 || exactMatch) {
     dropdown.classList.add('hidden');
@@ -240,12 +269,7 @@ function updateFileDropdown(query) {
     div.textContent = file;
     div.addEventListener('mousedown', (e) => {
       e.preventDefault(); // prevent blur before click fires
-      const input = document.getElementById('fileFilterInput');
-      input.value = file;
-      state.fileFilter = file.toLowerCase();
-      dropdown.classList.add('hidden');
-      document.getElementById('fileFilterClear').classList.remove('hidden');
-      applyFilters();
+      selectDropdownFile(file);
     });
     dropdown.appendChild(div);
   });
@@ -270,7 +294,27 @@ function initFileFilter() {
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
+    const options = dropdown.querySelectorAll('.file-filter-option');
+    const isOpen = !dropdown.classList.contains('hidden') && options.length > 0;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (isOpen) {
+        fileDropdownIndex = Math.min(fileDropdownIndex + 1, options.length - 1);
+        updateDropdownHighlight();
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (isOpen) {
+        fileDropdownIndex = Math.max(fileDropdownIndex - 1, 0);
+        updateDropdownHighlight();
+      }
+    } else if (e.key === 'Enter') {
+      if (isOpen && fileDropdownIndex >= 0) {
+        e.preventDefault();
+        selectDropdownFile(options[fileDropdownIndex].textContent);
+      }
+    } else if (e.key === 'Tab') {
       const value = input.value.trim();
       if (!value) return;
       const matches = getMatchingFiles(value);
