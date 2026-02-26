@@ -2005,7 +2005,11 @@ pre[class*="language-"] {
     box-shadow: 4px 0 12px var(--shadow);
   }
 
-  /* Hide resize handle on mobile */
+  /* Hide file filter and resize handle on mobile */
+  .file-filter {
+    display: none;
+  }
+
   .resize-handle {
     display: none;
   }
