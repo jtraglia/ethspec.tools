@@ -725,6 +725,49 @@ export function handleDeepLink(path, addHistory = true) {
 }
 
 /**
+ * Get visible (non-filtered) item nodes in tree order
+ */
+function getVisibleItemNodes() {
+  const nodes = document.querySelectorAll('#specsTree .tree-node[data-name]');
+  return Array.from(nodes).filter(n =>
+    !n.classList.contains('tree-filtered') &&
+    !n.closest('.tree-node[data-category]')?.classList.contains('tree-filtered')
+  );
+}
+
+/**
+ * Handle keyboard navigation in the specs tree
+ */
+function onTreeKeydown(e) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  // Don't interfere with input fields
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  const visible = getVisibleItemNodes();
+  if (visible.length === 0) return;
+
+  const currentIndex = visible.findIndex(n => n.dataset.name === state.currentItemName);
+
+  let nextIndex;
+  if (e.key === 'ArrowDown') {
+    nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, visible.length - 1);
+  } else {
+    nextIndex = currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0);
+  }
+
+  if (nextIndex === currentIndex) return;
+
+  e.preventDefault();
+  const node = visible[nextIndex];
+  const itemData = node._itemData;
+  if (itemData) {
+    const label = node.querySelector('.tree-label');
+    onItemSelect({ ...itemData, element: label });
+    label.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/**
  * Initialize specs mode
  */
 export async function init(savedVersion, searchTerm = '') {
@@ -735,6 +778,7 @@ export async function init(savedVersion, searchTerm = '') {
   initVersionSelector();
   initFileFilter();
   initReferenceClickHandler();
+  document.addEventListener('keydown', onTreeKeydown);
 
   // Discover available versions
   await discoverVersions();
