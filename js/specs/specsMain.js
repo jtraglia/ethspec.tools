@@ -183,7 +183,8 @@ function updateFileDropdown(query) {
   const matches = getMatchingFiles(query);
 
   dropdown.innerHTML = '';
-  if (matches.length === 0 || matches.length === 1) {
+  const exactMatch = query && matches.some(f => f.toLowerCase() === query.toLowerCase());
+  if (matches.length === 0 || exactMatch) {
     dropdown.classList.add('hidden');
     return;
   }
