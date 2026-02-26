@@ -137,8 +137,8 @@ function buildFileFilter() {
   for (const itemName of Object.keys(state.sourceMap.items)) {
     const forkMap = state.sourceMap.items[itemName];
     for (const fork of Object.keys(forkMap)) {
-      const filePath = forkMap[fork];
-      if (filePath) fileSet.add(filePath);
+      const loc = forkMap[fork];
+      if (loc && loc.file) fileSet.add(loc.file);
     }
   }
 

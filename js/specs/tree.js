@@ -322,8 +322,8 @@ export function buildTree(data, forks, sourceMap) {
       if (sourceMap && sourceMap.items && sourceMap.items[item.name]) {
         const fileSet = new Set();
         for (const fork of Object.keys(sourceMap.items[item.name])) {
-          const filePath = sourceMap.items[item.name][fork];
-          if (filePath) fileSet.add(filePath);
+          const loc = sourceMap.items[item.name][fork];
+          if (loc && loc.file) fileSet.add(loc.file);
         }
         node.dataset.files = Array.from(fileSet).join(' ');
       }
