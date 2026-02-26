@@ -62,7 +62,7 @@ function createUsedBySection(itemName) {
     item.innerHTML = `<code>${escapeHtml(refName)}</code>`;
     item.title = `Jump to ${refName}`;
     item.addEventListener('click', () => {
-      navigateToReference(refName, true);
+      navigateToReference(refName);
     });
     list.appendChild(item);
   });

@@ -6,7 +6,7 @@
 import { buildTree, filterTree, setOnItemSelectCallback } from './tree.js';
 import { displaySpec, clearSpec, openForkInViewer, showItemNotFound, setGetCurrentVersion, setGetSourceInfo } from './specViewer.js';
 import { CATEGORY_TYPES, CATEGORY_ORDER, getForkDisplayName } from './constants.js';
-import { initReferenceClickHandler, addToHistory, goBack, goForward, navigateToReference, clearHistory } from './references.js';
+import { initReferenceClickHandler } from './references.js';
 import { saveSpecsVersion, updateHash, setSpecsHasSelection } from '../main.js';
 import { initChangelog, exitChangelog, isChangelogActive, applyChangelogToTree } from './changelog.js';
 
@@ -134,11 +134,6 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
   document.querySelectorAll('#specsTree .tree-label.active').forEach(el => el.classList.remove('active'));
   if (item.element) {
     item.element.classList.add('active');
-  }
-
-  // Add to navigation history
-  if (addHistory) {
-    addToHistory(item.name, preferredFork);
   }
 
   // Display the spec (push browser history for user-initiated navigation)
@@ -318,8 +313,6 @@ async function onVersionChange(version) {
 
   state.currentVersion = version;
   saveSpecsVersion(version);
-  clearHistory();
-
   // Update URL
   if (itemNameToFind && state.currentItem) {
     const itemId = `specs/${version}/${state.currentItem.category}-${itemNameToFind}`;
@@ -447,39 +440,6 @@ function initVersionSelector() {
 }
 
 /**
- * Initialize navigation buttons
- */
-function initNavigation() {
-  const backButton = document.getElementById('navBack');
-  const forwardButton = document.getElementById('navForward');
-
-  // Remove existing listeners by cloning
-  if (backButton) {
-    const newBackButton = backButton.cloneNode(true);
-    backButton.parentNode.replaceChild(newBackButton, backButton);
-
-    newBackButton.addEventListener('click', () => {
-      const entry = goBack();
-      if (entry) {
-        navigateToReference(entry.name, false, entry.fork);
-      }
-    });
-  }
-
-  if (forwardButton) {
-    const newForwardButton = forwardButton.cloneNode(true);
-    forwardButton.parentNode.replaceChild(newForwardButton, forwardButton);
-
-    newForwardButton.addEventListener('click', () => {
-      const entry = goForward();
-      if (entry) {
-        navigateToReference(entry.name, false, entry.fork);
-      }
-    });
-  }
-}
-
-/**
  * Handle deep link
  * Format: version/category-itemName or version/category-itemName-FORK
  */
@@ -535,7 +495,6 @@ export async function init(savedVersion, searchTerm = '') {
   state.initialLoadComplete = false;
 
   // Initialize UI
-  initNavigation();
   initVersionSelector();
   initReferenceClickHandler();
 
