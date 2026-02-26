@@ -388,6 +388,10 @@ function onItemSelect(item, addHistory = true, preferredFork = null) {
 
   // Notify main.js that we have a selection
   setSpecsHasSelection(true);
+
+  // Close mobile sidebar so the spec is visible
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
 }
 
 // Expose for reference navigation
