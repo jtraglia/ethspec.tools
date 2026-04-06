@@ -15,15 +15,21 @@ import re
 import yaml
 from pathlib import Path
 
-# Import the debug tools from consensus-specs
-from eth2spec.debug.tools import get_ssz_object_from_ssz_encoded, output_ssz_to_file
+# Import the debug tools from consensus-specs (renamed from eth2spec to eth_consensus_specs
+# as of https://github.com/ethereum/consensus-specs/pull/4936)
+try:
+    from eth_consensus_specs.debug.tools import get_ssz_object_from_ssz_encoded, output_ssz_to_file
+    SPEC_PKG = "eth_consensus_specs"
+except ImportError:
+    from eth2spec.debug.tools import get_ssz_object_from_ssz_encoded, output_ssz_to_file
+    SPEC_PKG = "eth2spec"
 
 # Import SSZ types for defining Deltas
 from remerkleable.complex import Container, List
 from remerkleable.basic import uint64
 
 # Import VALIDATOR_REGISTRY_LIMIT constant from specs
-from eth2spec.phase0.mainnet import VALIDATOR_REGISTRY_LIMIT
+VALIDATOR_REGISTRY_LIMIT = importlib.import_module(f"{SPEC_PKG}.phase0.mainnet").VALIDATOR_REGISTRY_LIMIT
 
 # Define Deltas type for rewards tests (as specified in tests/formats/rewards/README.md)
 class Deltas(Container):
@@ -36,7 +42,10 @@ def load_previous_fork_mapping():
     Parse PREVIOUS_FORK_OF from constants.py to get fork transition mapping.
     Returns a dict mapping fork -> previous_fork (e.g., 'altair' -> 'phase0')
     """
-    constants_path = Path(__file__).parent.parent / 'consensus-specs' / 'tests' / 'core' / 'pyspec' / 'eth2spec' / 'test' / 'helpers' / 'constants.py'
+    base = Path(__file__).parent.parent / 'consensus-specs' / 'tests' / 'core' / 'pyspec'
+    constants_path = base / 'eth_consensus_specs' / 'test' / 'helpers' / 'constants.py'
+    if not constants_path.exists():
+        constants_path = base / 'eth2spec' / 'test' / 'helpers' / 'constants.py'
 
     if not constants_path.exists():
         # Return empty dict if file doesn't exist - will use current fork
@@ -447,8 +456,8 @@ def get_ssz_type_class(preset: str, fork: str, type_name: str):
     if preset == 'general':
         preset = 'mainnet'
 
-    # Build the module path: eth2spec.{fork}.{preset}
-    module_path = f"eth2spec.{fork}.{preset}"
+    # Build the module path: {pkg}.{fork}.{preset}
+    module_path = f"{SPEC_PKG}.{fork}.{preset}"
 
     try:
         module = importlib.import_module(module_path)
