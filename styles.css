@@ -559,6 +559,23 @@ input:checked + .toggle-slider:before {
   color: white;
 }
 
+.tree-fork-badge-deprecated {
+  position: relative;
+}
+
+.tree-fork-badge-deprecated::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 1px;
+  transform: translateY(-50%);
+}
+
+
 /* Tree count badge (tests mode) */
 .tree-count {
   margin-left: auto;
@@ -799,6 +816,29 @@ input:checked + .toggle-slider:before {
 
 [data-theme="dark"] .spec-reference:hover {
   text-decoration-color: #90caf9 !important;
+}
+
+/* Deprecation banner */
+.deprecation-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.deprecation-banner i {
+  color: #ffc107;
+}
+
+.deprecation-banner .fork-badge {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
 }
 
 /* Used by section */
@@ -1083,11 +1123,11 @@ input:checked + .toggle-slider:before {
 
 .file-name-badge {
   display: inline-block;
-  padding: 0.35rem 0.6rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-weight: 600;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .file-content {

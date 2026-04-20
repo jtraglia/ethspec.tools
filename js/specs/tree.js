@@ -85,6 +85,37 @@ function getBestVersionValue(categoryData) {
 }
 
 /**
+ * Build a name -> deprecatingFork map by diffing categories across forks.
+ * An item is "deprecated at fork N" if it exists in fork N-1 but not in fork N.
+ * Uses the earliest such fork per item.
+ */
+function buildDeprecationIndex(data, forks) {
+  const index = {};
+  const presetData = data.mainnet || data.minimal;
+  if (!presetData) return index;
+
+  for (let i = 1; i < forks.length; i++) {
+    const prev = forks[i - 1];
+    const curr = forks[i];
+    const prevFork = presetData[prev] || presetData[prev.toLowerCase()];
+    const currFork = presetData[curr] || presetData[curr.toLowerCase()];
+    if (!prevFork || !currFork) continue;
+
+    for (const category of Object.keys(prevFork)) {
+      const prevItems = prevFork[category];
+      const currItems = currFork[category] || {};
+      if (!prevItems || typeof prevItems !== 'object') continue;
+      for (const name of Object.keys(prevItems)) {
+        if (!(name in currItems) && !(name in index)) {
+          index[name] = curr;
+        }
+      }
+    }
+  }
+  return index;
+}
+
+/**
  * Collect all items from the data, tracking only forks where the value changed
  */
 export function collectItems(data, forks) {
@@ -95,6 +126,7 @@ export function collectItems(data, forks) {
   // Use mainnet as primary for determining forks/changes
   const primaryData = mainnetData || minimalData;
 
+  const deprecationIndex = buildDeprecationIndex(data, forks);
   const items = {};
 
   // For each category
@@ -168,6 +200,15 @@ export function collectItems(data, forks) {
             lastValues[name] = valueStr;
           }
         });
+      }
+    });
+  });
+
+  // Annotate items with deprecation info (by name, regardless of category)
+  CATEGORY_ORDER.forEach(category => {
+    Object.values(items[category] || {}).forEach(item => {
+      if (item.name in deprecationIndex) {
+        item.deprecatedAt = deprecationIndex[item.name];
       }
     });
   });
@@ -253,6 +294,17 @@ function createItemNode(item) {
   // Add fork badges container (reversed so latest forks appear first)
   const badgesContainer = document.createElement('span');
   badgesContainer.className = 'tree-fork-badges';
+
+  // Deprecation badge (same letter + color as the deprecating fork, crossed out)
+  if (item.deprecatedAt) {
+    const depBadge = document.createElement('span');
+    depBadge.className = 'tree-fork-badge tree-fork-badge-deprecated';
+    depBadge.textContent = getForkShortLabel(item.deprecatedAt);
+    depBadge.style.backgroundColor = getForkColor(item.deprecatedAt);
+    depBadge.title = `Deprecated in ${getForkDisplayName(item.deprecatedAt)}`;
+    badgesContainer.appendChild(depBadge);
+    node.classList.add('tree-node-deprecated');
+  }
 
   [...item.forks].reverse().forEach(fork => {
     const badge = document.createElement('span');

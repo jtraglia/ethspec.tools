@@ -37,6 +37,32 @@ export function setGetSourceInfo(fn) {
 }
 
 /**
+ * Create a "Deprecated as of {fork}" banner. Returns null if the item isn't deprecated.
+ */
+function createDeprecationBanner(item) {
+  if (!item.deprecatedAt) return null;
+
+  const banner = document.createElement('div');
+  banner.className = 'deprecation-banner';
+
+  const icon = document.createElement('i');
+  icon.className = 'fas fa-exclamation-triangle';
+  banner.appendChild(icon);
+
+  const text = document.createElement('span');
+  text.textContent = 'Deprecated in ';
+  banner.appendChild(text);
+
+  const badge = document.createElement('span');
+  badge.className = 'fork-badge';
+  badge.textContent = getForkDisplayName(item.deprecatedAt);
+  badge.style.backgroundColor = getForkColor(item.deprecatedAt);
+  banner.appendChild(badge);
+
+  return banner;
+}
+
+/**
  * Create a "Used by" section showing items that reference this item
  * @param {string} itemName - The name of the current item
  * @returns {HTMLElement|null} - The used by section element, or null if no usages
@@ -176,10 +202,14 @@ export function displaySpec(item, data, pushHistory = false) {
     return;
   }
 
+  // Deprecation banner (if the item was removed in a later fork)
+  const deprecationBanner = createDeprecationBanner(item);
+
   // Check if this is a variable type (constants, presets, config) or code type
   const isVariable = ['constant_vars', 'preset_vars', 'config_vars'].includes(item.category);
 
   if (isVariable) {
+    if (deprecationBanner) content.appendChild(deprecationBanner);
     displayVariable(item, content);
     // Add "Used by" section
     const usedBySection = createUsedBySection(item.name);
@@ -188,6 +218,7 @@ export function displaySpec(item, data, pushHistory = false) {
     }
   } else {
     renderCodeView(item, content);
+    if (deprecationBanner) content.prepend(deprecationBanner);
   }
 }
 
